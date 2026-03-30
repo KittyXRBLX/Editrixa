@@ -1,1021 +1,709 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ImageBoard</title>
-<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Noto+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Kitty34</title>
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #0d0d10;
-    --surface: #16161d;
-    --surface2: #1e1e28;
-    --border: #2a2a38;
-    --accent: #e8445a;
-    --accent2: #ff6b35;
-    --text: #e8e8f0;
-    --text-dim: #7a7a9a;
-    --tag: #252535;
-    --tag-hover: #32324a;
-  }
+  :root{--bg:#121212;--surface:#1e1e1e;--surface2:#2a2a2a;--primary:#ef5350;--primary-dark:#c62828;--text:#e0e0e0;--text-secondary:#9e9e9e;--border:#333;--nav-width:256px;--header-height:56px;--card-radius:4px;--transition:0.2s ease}
+  [data-theme="light"]{--bg:#f5f5f5;--surface:#fff;--surface2:#eee;--text:#212121;--text-secondary:#757575;--border:#ddd}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Roboto',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  /* APPBAR */
+  .appbar{position:fixed;top:0;left:0;right:0;height:var(--header-height);background:var(--surface);display:flex;align-items:center;padding:0 8px;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+  .menu-btn,.icon-btn{width:40px;height:40px;border:none;background:none;cursor:pointer;color:var(--text);border-radius:50%;display:flex;align-items:center;justify-content:center;transition:background var(--transition)}
+  .menu-btn:hover,.icon-btn:hover{background:rgba(255,255,255,.08)}
+  .logo{font-size:1.25rem;font-weight:700;color:var(--primary);text-decoration:none;margin:0 12px;letter-spacing:.5px}
+  .search-wrap{flex:1;max-width:540px;margin:0 8px;position:relative}
+  .search-wrap input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 36px 6px 12px;color:var(--text);font-size:.9rem;outline:none;transition:border var(--transition)}
+  .search-wrap input:focus{border-color:var(--primary)}
+  .search-icon{position:absolute;right:8px;top:50%;transform:translateY(-50%);color:var(--text-secondary);pointer-events:none;font-size:20px}
+  .spacer{flex:1}
+  .right-actions{display:flex;align-items:center;gap:4px}
+  .upload-btn{display:flex;align-items:center;gap:6px;background:var(--primary);border:none;border-radius:4px;color:#fff;cursor:pointer;padding:7px 14px;font-size:.85rem;font-weight:500;transition:background var(--transition)}
+  .upload-btn:hover{background:var(--primary-dark)}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Noto Sans', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+  /* SIDEBAR */
+  .sidebar{position:fixed;top:var(--header-height);left:0;bottom:0;width:var(--nav-width);background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s ease;display:flex;flex-direction:column}
+  .sidebar.hidden{transform:translateX(-100%)}
+  .nav-item{display:flex;align-items:center;gap:16px;padding:12px 16px;text-decoration:none;color:var(--text);font-size:.9rem;cursor:pointer;transition:background var(--transition);user-select:none}
+  .nav-item:hover{background:rgba(255,255,255,.05)}
+  .nav-item.active{color:var(--primary)}
+  .nav-item .material-icons{font-size:22px}
+  .nav-divider{height:1px;background:var(--border);margin:4px 0}
+  .tag-creator{padding:12px 16px;border-top:1px solid var(--border);margin-top:auto}
+  .tag-creator h4{font-size:.8rem;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:10px}
+  .tag-input-wrap{display:flex;gap:6px;margin-bottom:8px}
+  .tag-input-wrap input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:6px 10px;color:var(--text);font-size:.8rem;outline:none}
+  .tag-input-wrap input:focus{border-color:var(--primary)}
+  .tag-input-wrap button{background:var(--primary);border:none;border-radius:4px;color:#fff;cursor:pointer;padding:6px 10px;font-size:.8rem;font-weight:500;transition:background var(--transition)}
+  .tag-input-wrap button:hover{background:var(--primary-dark)}
+  .tag-list{display:flex;flex-wrap:wrap;gap:4px;max-height:120px;overflow-y:auto}
+  .tag-chip{background:var(--surface2);border:1px solid var(--border);border-radius:3px;padding:2px 8px;font-size:.75rem;color:var(--primary);cursor:pointer;display:flex;align-items:center;gap:4px;transition:background var(--transition)}
+  .tag-chip:hover{background:rgba(239,83,80,.15)}
 
-  /* ─── TOPBAR ─── */
-  .topbar {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    height: 56px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 14px;
-    z-index: 200;
-  }
+  /* MAIN */
+  .main{margin-left:var(--nav-width);margin-top:var(--header-height);padding:12px;transition:margin-left .3s ease}
+  .main.full{margin-left:0}
 
-  .menu-btn {
-    background: none; border: none; color: var(--text-dim);
-    cursor: pointer; display: flex; align-items: center;
-    padding: 6px; border-radius: 6px;
-    transition: color .2s, background .2s;
-  }
-  .menu-btn:hover { color: var(--text); background: var(--surface2); }
+  /* TOOLBAR */
+  .toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+  .toolbar-left{display:flex;align-items:center;gap:8px}
+  .filter-chip{padding:5px 14px;border-radius:16px;border:1px solid var(--border);background:none;color:var(--text);font-size:.8rem;cursor:pointer;transition:all var(--transition)}
+  .filter-chip.active,.filter-chip:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+  .view-toggle{display:flex;gap:4px}
+  .view-btn{background:none;border:none;color:var(--text-secondary);cursor:pointer;border-radius:4px;padding:4px;display:flex;align-items:center;transition:color var(--transition)}
+  .view-btn.active,.view-btn:hover{color:var(--primary)}
+  .post-count{font-size:.8rem;color:var(--text-secondary)}
 
-  .logo {
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    font-size: 1.35rem;
-    letter-spacing: 2px;
-    color: var(--accent);
-    text-decoration: none;
-    white-space: nowrap;
-  }
-  .logo span { color: var(--text-dim); }
+  /* GRID */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px}
+  .grid.list-view{grid-template-columns:1fr}
+  .grid.list-view .card{aspect-ratio:unset;height:110px}
+  .grid.list-view .card img,.grid.list-view .card video{height:110px;width:100%}
+  .card{position:relative;background:var(--surface2);border-radius:var(--card-radius);overflow:hidden;cursor:pointer;aspect-ratio:4/3;transition:transform var(--transition),box-shadow var(--transition)}
+  .card:hover{transform:scale(1.02);box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:2}
+  .card img,.card video{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+  .card-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.85));padding:28px 8px 7px;display:flex;align-items:flex-end;justify-content:space-between;opacity:0;transition:opacity var(--transition)}
+  .card:hover .card-overlay{opacity:1}
+  .card-info{flex:1;min-width:0}
+  .card-title{font-size:.75rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
+  .card-tags-row{display:flex;gap:3px;overflow:hidden}
+  .card-tag{font-size:.65rem;background:rgba(239,83,80,.7);color:#fff;padding:1px 5px;border-radius:2px;white-space:nowrap}
+  .card-actions{display:flex;flex-direction:column;align-items:center;gap:5px;margin-left:6px}
+  .card-like-btn{display:flex;flex-direction:column;align-items:center;gap:1px;background:none;border:none;cursor:pointer;color:#fff;font-size:.7rem}
+  .card-like-btn .material-icons{font-size:17px;transition:color var(--transition)}
+  .card-like-btn:hover .material-icons,.card-like-btn.liked .material-icons{color:#ef9a9a}
+  .card-bm-btn{background:none;border:none;cursor:pointer;color:#fff;display:flex;align-items:center}
+  .card-bm-btn .material-icons{font-size:18px}
+  .card-badge{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);color:#fff;font-size:.65rem;padding:2px 6px;border-radius:2px;display:flex;align-items:center;gap:2px}
+  .card-badge .material-icons{font-size:11px}
+  .card-new{position:absolute;top:6px;left:6px;background:var(--primary);color:#fff;font-size:.6rem;padding:2px 6px;border-radius:2px;font-weight:700;letter-spacing:.5px}
+  .empty-state{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;color:var(--text-secondary);gap:14px;text-align:center}
+  .empty-state .material-icons{font-size:72px;opacity:.2}
+  .empty-state p{font-size:.95rem}
+  .empty-state button{background:var(--primary);border:none;border-radius:4px;color:#fff;cursor:pointer;padding:10px 28px;font-size:.9rem;font-weight:500;transition:background var(--transition)}
+  .empty-state button:hover{background:var(--primary-dark)}
 
-  .search-wrap {
-    flex: 1;
-    position: relative;
-    max-width: 640px;
-  }
+  /* PAGINATION */
+  .pagination{display:flex;align-items:center;justify-content:center;gap:8px;margin:24px 0}
+  .page-btn{width:36px;height:36px;border-radius:4px;border:1px solid var(--border);background:var(--surface);color:var(--text);cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:all var(--transition)}
+  .page-btn:hover,.page-btn.active{background:var(--primary);border-color:var(--primary);color:#fff}
+  .page-btn:disabled{opacity:.3;cursor:default;background:none;pointer-events:none}
+  .page-btn .material-icons{font-size:18px}
 
-  .search-wrap input {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px 44px 8px 14px;
-    color: var(--text);
-    font-size: .9rem;
-    font-family: 'Noto Sans', sans-serif;
-    outline: none;
-    transition: border-color .2s;
-  }
-  .search-wrap input:focus { border-color: var(--accent); }
-  .search-wrap input::placeholder { color: var(--text-dim); }
+  /* ACTIVE TAGS BAR */
+  .active-tags-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .active-tag{background:rgba(239,83,80,.15);border:1px solid rgba(239,83,80,.4);border-radius:3px;padding:3px 10px;font-size:.8rem;color:var(--primary);display:flex;align-items:center;gap:6px;cursor:pointer}
+  .active-tag .material-icons{font-size:14px}
 
-  .search-wrap .material-icons {
-    position: absolute; right: 12px; top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-dim); font-size: 20px; pointer-events: none;
-  }
+  /* MODALS */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--surface);border-radius:10px;width:90%;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.7);animation:fadeUp .2s ease;max-height:92vh;overflow-y:auto}
+  .modal.wide{max-width:560px}
+  .modal.narrow{max-width:420px}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  .modal h2{font-size:1.1rem;margin-bottom:4px}
+  .modal-sub{font-size:.85rem;color:var(--text-secondary);margin-bottom:18px}
+  .modal label{font-size:.8rem;color:var(--text-secondary);display:block;margin-bottom:4px;margin-top:14px}
+  .modal label:first-of-type{margin-top:0}
+  .modal input,.modal select,.modal textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:8px 12px;color:var(--text);font-size:.9rem;outline:none;font-family:inherit}
+  .modal input:focus,.modal select:focus,.modal textarea:focus{border-color:var(--primary)}
+  .modal textarea{resize:vertical;min-height:64px}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+  .btn-ghost{background:none;border:1px solid var(--border);border-radius:4px;padding:8px 20px;color:var(--text);cursor:pointer;font-size:.85rem;transition:background var(--transition)}
+  .btn-ghost:hover{background:var(--surface2)}
+  .btn-primary{background:var(--primary);border:none;border-radius:4px;padding:8px 20px;color:#fff;cursor:pointer;font-size:.85rem;font-weight:500;transition:background var(--transition);display:flex;align-items:center;gap:6px}
+  .btn-primary:hover{background:var(--primary-dark)}
+  .btn-primary .material-icons{font-size:16px}
 
-  .topbar-right {
-    display: flex; align-items: center; gap: 8px; margin-left: auto;
-  }
+  /* DROPZONE */
+  .dropzone{border:2px dashed var(--border);border-radius:8px;padding:32px 20px;text-align:center;cursor:pointer;transition:border var(--transition),background var(--transition);position:relative;margin-bottom:4px}
+  .dropzone:hover,.dropzone.drag{border-color:var(--primary);background:rgba(239,83,80,.05)}
+  .dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+  .dropzone .dz-icon{font-size:44px;color:var(--text-secondary);margin-bottom:8px}
+  .dropzone p{font-size:.85rem;color:var(--text-secondary)}
+  .dropzone p span{color:var(--primary);font-weight:500}
+  .preview-wrap{position:relative;border-radius:6px;overflow:hidden;background:#000;margin-bottom:4px}
+  .preview-wrap img,.preview-wrap video{width:100%;max-height:200px;object-fit:contain;display:block}
+  .preview-clear{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.65);border:none;border-radius:50%;color:#fff;cursor:pointer;width:28px;height:28px;display:flex;align-items:center;justify-content:center}
+  .preview-clear .material-icons{font-size:15px}
+  .tag-input-modal{display:flex;gap:6px;margin-bottom:8px}
+  .tag-input-modal input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;color:var(--text);font-size:.85rem;outline:none}
+  .tag-input-modal input:focus{border-color:var(--primary)}
+  .tag-input-modal button{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer;padding:7px 12px;font-size:.8rem;transition:background var(--transition)}
+  .tag-input-modal button:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+  .post-tags-list{display:flex;flex-wrap:wrap;gap:4px;min-height:22px}
+  .post-tag-chip{background:rgba(239,83,80,.15);border:1px solid rgba(239,83,80,.3);border-radius:3px;padding:3px 8px;font-size:.75rem;color:var(--primary);display:flex;align-items:center;gap:4px}
+  .post-tag-chip button{background:none;border:none;color:var(--text-secondary);cursor:pointer;padding:0;line-height:1;font-size:15px;display:flex;align-items:center}
+  .post-tag-chip button:hover{color:var(--primary)}
 
-  .icon-btn {
-    background: none; border: none; color: var(--text-dim);
-    cursor: pointer; padding: 6px; border-radius: 6px;
-    display: flex; align-items: center;
-    transition: color .2s, background .2s;
-  }
-  .icon-btn:hover { color: var(--text); background: var(--surface2); }
+  /* LIGHTBOX */
+  .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.94);z-index:800;display:none;align-items:center;justify-content:center;flex-direction:column}
+  .lightbox.open{display:flex}
+  .lightbox-close{position:absolute;top:14px;right:16px;background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:26px;line-height:1;transition:color .2s}
+  .lightbox-close:hover{color:#fff}
+  .lightbox-media{max-width:92vw;max-height:78vh;object-fit:contain;border-radius:4px}
+  .lightbox-info{margin-top:14px;text-align:center;padding:0 16px}
+  .lightbox-title{font-size:1rem;color:#fff;margin-bottom:8px;font-weight:500}
+  .lightbox-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-bottom:10px}
+  .lightbox-tag{background:rgba(239,83,80,.4);color:#fff;font-size:.75rem;padding:2px 8px;border-radius:2px;cursor:pointer}
+  .lightbox-tag:hover{background:rgba(239,83,80,.7)}
+  .lightbox-actions{display:flex;gap:8px;justify-content:center}
+  .lb-action-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);border-radius:4px;padding:6px 14px;cursor:pointer;font-size:.8rem;transition:all .2s;display:flex;align-items:center;gap:5px}
+  .lb-action-btn .material-icons{font-size:15px}
+  .lb-action-btn:hover{background:rgba(255,255,255,.1);color:#fff}
+  .lb-action-btn.danger:hover{background:var(--primary);border-color:var(--primary);color:#fff}
+  .lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.08);border:none;color:#fff;cursor:pointer;border-radius:50%;width:46px;height:46px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+  .lightbox-nav:hover{background:rgba(255,255,255,.18)}
+  .lightbox-nav.prev{left:14px}
+  .lightbox-nav.next{right:14px}
 
-  .theme-toggle { font-size: 20px; }
+  /* TOAST */
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:10px 22px;border-radius:4px;font-size:.9rem;z-index:999;opacity:0;pointer-events:none;transition:opacity .3s;white-space:nowrap}
+  .toast.show{opacity:1}
 
-  /* ─── LAYOUT ─── */
-  .layout {
-    display: flex;
-    padding-top: 56px;
-    min-height: 100vh;
-  }
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
 
-  /* ─── SIDEBAR ─── */
-  .sidebar {
-    width: 220px;
-    min-width: 220px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    position: fixed;
-    top: 56px; bottom: 0; left: 0;
-    overflow-y: auto;
-    transition: transform .3s ease;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .sidebar.collapsed { transform: translateX(-220px); }
-
-  .sidebar nav { padding: 12px 0; flex: 1; }
-
-  .nav-item {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 18px;
-    color: var(--text-dim);
-    text-decoration: none;
-    font-size: .88rem;
-    font-weight: 500;
-    letter-spacing: .3px;
-    border-left: 3px solid transparent;
-    transition: all .15s;
-    cursor: pointer;
-  }
-  .nav-item:hover { color: var(--text); background: var(--surface2); }
-  .nav-item.active {
-    color: var(--accent);
-    border-left-color: var(--accent);
-    background: rgba(232,68,90,.08);
-  }
-  .nav-item .material-icons { font-size: 20px; }
-
-  .sidebar-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 8px 0;
-  }
-
-  /* ─── TAG SECTION IN SIDEBAR ─── */
-  .tag-section { padding: 12px; }
-  .tag-section-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: .75rem;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    padding: 0 6px 8px;
-  }
-
-  .tag-input-wrap {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 10px;
-  }
-  .tag-input-wrap input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 6px 10px;
-    color: var(--text);
-    font-size: .8rem;
-    font-family: 'Noto Sans', sans-serif;
-    outline: none;
-    transition: border-color .2s;
-  }
-  .tag-input-wrap input:focus { border-color: var(--accent); }
-  .tag-input-wrap input::placeholder { color: var(--text-dim); }
-  .tag-add-btn {
-    background: var(--accent);
-    border: none;
-    border-radius: 6px;
-    color: #fff;
-    width: 30px;
-    height: 30px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer;
-    flex-shrink: 0;
-    transition: background .2s, transform .1s;
-  }
-  .tag-add-btn:hover { background: #d03048; }
-  .tag-add-btn:active { transform: scale(.92); }
-  .tag-add-btn .material-icons { font-size: 18px; }
-
-  .tags-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .tag-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: var(--tag);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: .75rem;
-    color: var(--text-dim);
-    cursor: pointer;
-    transition: all .15s;
-    user-select: none;
-  }
-  .tag-chip:hover { background: var(--tag-hover); color: var(--text); }
-  .tag-chip.active { background: rgba(232,68,90,.15); border-color: var(--accent); color: var(--accent); }
-  .tag-chip .remove-tag {
-    font-size: 13px;
-    color: var(--text-dim);
-    transition: color .15s;
-    line-height: 1;
-  }
-  .tag-chip:hover .remove-tag { color: var(--accent); }
-
-  /* ─── MAIN CONTENT ─── */
-  .main {
-    flex: 1;
-    margin-left: 220px;
-    transition: margin-left .3s ease;
-    padding: 20px;
-    min-width: 0;
-  }
-  .main.full { margin-left: 0; }
-
-  /* ─── CONTROLS ─── */
-  .controls {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  .filter-tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 4px;
-  }
-
-  .filter-tab {
-    padding: 6px 16px;
-    border: none;
-    background: none;
-    color: var(--text-dim);
-    border-radius: 5px;
-    font-size: .85rem;
-    font-family: 'Noto Sans', sans-serif;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all .15s;
-  }
-  .filter-tab:hover { color: var(--text); background: var(--surface2); }
-  .filter-tab.active { background: var(--accent); color: #fff; }
-
-  .view-btns {
-    display: flex;
-    gap: 4px;
-  }
-  .view-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-dim);
-    padding: 6px;
-    cursor: pointer;
-    display: flex; align-items: center;
-    transition: all .15s;
-  }
-  .view-btn:hover { color: var(--text); border-color: var(--text-dim); }
-  .view-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(232,68,90,.08); }
-  .view-btn .material-icons { font-size: 20px; }
-
-  .results-count {
-    color: var(--text-dim);
-    font-size: .82rem;
-  }
-
-  /* ─── ACTIVE TAGS BAR ─── */
-  .active-tags-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 14px;
-  }
-  .active-tags-bar:empty { display: none; }
-
-  /* ─── GRID ─── */
-  .grid {
-    columns: 5 200px;
-    column-gap: 10px;
-  }
-
-  .grid.list-view { columns: 1; }
-
-  .card {
-    break-inside: avoid;
-    margin-bottom: 10px;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    cursor: pointer;
-    position: relative;
-    transition: transform .2s, border-color .2s, box-shadow .2s;
-  }
-  .card:hover {
-    transform: translateY(-3px);
-    border-color: var(--accent);
-    box-shadow: 0 8px 24px rgba(232,68,90,.18);
-  }
-
-  .card-img {
-    width: 100%;
-    display: block;
-    aspect-ratio: attr(data-ratio);
-    object-fit: cover;
-    background: var(--surface2);
-  }
-
-  .card-placeholder {
-    width: 100%;
-    background: var(--surface2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-dim);
-  }
-
-  .card-overlay {
-    position: absolute;
-    bottom: 0; left: 0; right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,.75));
-    padding: 20px 10px 8px;
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    opacity: 0;
-    transition: opacity .2s;
-  }
-  .card:hover .card-overlay { opacity: 1; }
-
-  .card-likes {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: .78rem;
-    color: #fff;
-  }
-  .card-likes .material-icons { font-size: 15px; color: var(--accent); }
-
-  .video-badge {
-    position: absolute;
-    top: 8px; left: 8px;
-    background: rgba(0,0,0,.7);
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: .7rem;
-    color: #fff;
-    display: flex; align-items: center; gap: 3px;
-    backdrop-filter: blur(4px);
-  }
-  .video-badge .material-icons { font-size: 13px; }
-
-  .card-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    padding: 0 6px;
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: all .2s;
-  }
-  .card:hover .card-tags {
-    opacity: 1;
-    max-height: 40px;
-    padding: 6px;
-  }
-
-  /* LIST VIEW */
-  .grid.list-view .card {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-  }
-  .grid.list-view .card-placeholder {
-    width: 160px;
-    min-width: 160px;
-    height: 100px;
-    flex-shrink: 0;
-  }
-  .grid.list-view .card-overlay { display: none; }
-  .grid.list-view .card-info { padding: 10px 10px 10px 0; }
-
-  /* ─── PAGINATION ─── */
-  .pagination {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    margin-top: 32px;
-    padding-bottom: 24px;
-  }
-
-  .page-btn {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--text-dim);
-    padding: 7px 13px;
-    font-size: .85rem;
-    font-family: 'Noto Sans', sans-serif;
-    cursor: pointer;
-    transition: all .15s;
-    display: flex; align-items: center;
-  }
-  .page-btn:hover { color: var(--text); border-color: var(--text-dim); }
-  .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .page-btn:disabled { opacity: .35; cursor: not-allowed; }
-
-  /* ─── UPLOAD BUTTON ─── */
-  .upload-fab {
-    position: fixed;
-    bottom: 24px; right: 24px;
-    background: var(--accent);
-    border: none;
-    border-radius: 50%;
-    width: 52px; height: 52px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    cursor: pointer;
-    box-shadow: 0 4px 20px rgba(232,68,90,.4);
-    transition: transform .2s, box-shadow .2s;
-    z-index: 150;
-  }
-  .upload-fab:hover {
-    transform: scale(1.08);
-    box-shadow: 0 6px 28px rgba(232,68,90,.55);
-  }
-  .upload-fab .material-icons { font-size: 24px; }
-
-  /* ─── MODAL ─── */
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.7);
-    backdrop-filter: blur(4px);
-    z-index: 300;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .2s;
-  }
-  .modal-overlay.open { opacity: 1; pointer-events: all; }
-
-  .modal {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    width: min(520px, 95vw);
-    padding: 28px;
-    transform: translateY(20px);
-    transition: transform .25s ease;
-  }
-  .modal-overlay.open .modal { transform: translateY(0); }
-
-  .modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-  }
-  .modal-title {
-    font-family: 'Rajdhani', sans-serif;
-    font-size: 1.3rem;
-    font-weight: 700;
-    letter-spacing: 1px;
-  }
-
-  .modal label {
-    display: block;
-    font-size: .82rem;
-    color: var(--text-dim);
-    margin-bottom: 6px;
-    letter-spacing: .3px;
-  }
-  .modal input[type="text"], .modal textarea, .modal select {
-    width: 100%;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    padding: 9px 12px;
-    color: var(--text);
-    font-size: .88rem;
-    font-family: 'Noto Sans', sans-serif;
-    outline: none;
-    margin-bottom: 14px;
-    transition: border-color .2s;
-  }
-  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
-
-  .modal-tags-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-bottom: 16px;
-    min-height: 32px;
-    padding: 8px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-  }
-
-  .modal-tag {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(232,68,90,.15);
-    border: 1px solid rgba(232,68,90,.3);
-    border-radius: 4px;
-    padding: 3px 8px;
-    font-size: .76rem;
-    color: var(--accent);
-  }
-  .modal-tag button {
-    background: none; border: none; color: inherit;
-    cursor: pointer; padding: 0; line-height: 1;
-    font-size: 15px;
-  }
-
-  .submit-btn {
-    width: 100%;
-    background: var(--accent);
-    border: none;
-    border-radius: 8px;
-    color: #fff;
-    padding: 11px;
-    font-size: .95rem;
-    font-family: 'Rajdhani', sans-serif;
-    font-weight: 700;
-    letter-spacing: 1px;
-    cursor: pointer;
-    transition: background .2s;
-  }
-  .submit-btn:hover { background: #d03048; }
-
-  /* ─── SCROLLBAR ─── */
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
-
-  /* ─── RESPONSIVE ─── */
-  @media (max-width: 768px) {
-    .sidebar { transform: translateX(-220px); }
-    .sidebar.open { transform: translateX(0); }
-    .main { margin-left: 0; }
-    .grid { columns: 2 130px; }
+  @media(max-width:768px){
+    .sidebar{transform:translateX(-100%)}
+    .sidebar.open{transform:translateX(0)}
+    .main{margin-left:0}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    .search-wrap{max-width:unset}
+    .tag-creator{display:none}
+    .upload-btn .upload-label{display:none}
   }
 </style>
 </head>
 <body>
 
-<!-- TOPBAR -->
-<header class="topbar">
-  <button class="menu-btn" id="menuToggle">
-    <span class="material-icons">menu</span>
-  </button>
-  <a class="logo" href="#">IMAGE<span>BOARD</span></a>
+<!-- APPBAR -->
+<header class="appbar">
+  <button class="menu-btn" onclick="toggleSidebar()"><span class="material-icons">menu</span></button>
+  <a class="logo" href="#">Kitty34</a>
   <div class="search-wrap">
-    <input type="text" placeholder="Search tags, artists, series…" id="searchInput">
-    <span class="material-icons">search</span>
+    <input type="text" id="searchInput" placeholder="Search tags or titles..." onkeydown="handleSearch(event)">
+    <span class="material-icons search-icon">search</span>
   </div>
-  <div class="topbar-right">
-    <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle theme">
-      <span class="material-icons">nightlight_round</span>
+  <div class="spacer"></div>
+  <div class="right-actions">
+    <button class="upload-btn" onclick="openUploadModal()">
+      <span class="material-icons">add</span>
+      <span class="upload-label">Upload</span>
     </button>
-    <button class="icon-btn" title="Account">
-      <span class="material-icons">account_circle</span>
-    </button>
+    <button class="icon-btn" onclick="toggleTheme()"><span class="material-icons" id="themeIcon">nightlight_round</span></button>
+    <button class="icon-btn" onclick="openTagModal()" title="Create tag"><span class="material-icons">local_offer</span></button>
+    <button class="icon-btn"><span class="material-icons">account_circle</span></button>
   </div>
 </header>
 
-<!-- LAYOUT -->
-<div class="layout">
-
-  <!-- SIDEBAR -->
-  <aside class="sidebar" id="sidebar">
-    <nav>
-      <a class="nav-item active" href="#">
-        <span class="material-icons">home</span> Home
-      </a>
-      <a class="nav-item" href="#">
-        <span class="material-icons">whatshot</span> Hot
-      </a>
-      <a class="nav-item" href="#">
-        <span class="material-icons">star_border</span> Best
-      </a>
-      <a class="nav-item" href="#">
-        <span class="material-icons">subscriptions</span> Subscriptions
-      </a>
-      <div class="sidebar-divider"></div>
-      <a class="nav-item" href="#">
-        <span class="material-icons">bookmark</span> Bookmarks
-      </a>
-      <a class="nav-item" href="#">
-        <span class="material-icons">groups</span> Community
-      </a>
-    </nav>
-
-    <div class="sidebar-divider"></div>
-
-    <!-- TAG MANAGER -->
-    <div class="tag-section">
-      <div class="tag-section-title">My Tags</div>
-      <div class="tag-input-wrap">
-        <input type="text" placeholder="Add a tag…" id="sidebarTagInput" maxlength="32">
-        <button class="tag-add-btn" id="sidebarTagAdd">
-          <span class="material-icons">add</span>
-        </button>
-      </div>
-      <div class="tags-list" id="sidebarTagsList"></div>
+<!-- SIDEBAR -->
+<nav class="sidebar" id="sidebar">
+  <a class="nav-item active" onclick="filterView('all',this)"><span class="material-icons">home</span>Home</a>
+  <a class="nav-item" onclick="filterView('hot',this)"><span class="material-icons">whatshot</span>Hot</a>
+  <a class="nav-item" onclick="filterView('best',this)"><span class="material-icons">star_border</span>Best</a>
+  <a class="nav-item" onclick="filterView('bookmarks',this)"><span class="material-icons">bookmark</span>Bookmarks</a>
+  <a class="nav-item" onclick="filterView('mine',this)"><span class="material-icons">person</span>My Posts</a>
+  <div class="nav-divider"></div>
+  <div class="tag-creator">
+    <h4>My Tags</h4>
+    <div class="tag-input-wrap">
+      <input type="text" id="sidebarTagInput" placeholder="New tag..." onkeydown="if(event.key==='Enter')addTagSidebar()">
+      <button onclick="addTagSidebar()">Add</button>
     </div>
-  </aside>
+    <div class="tag-list" id="sidebarTagList"></div>
+  </div>
+</nav>
 
-  <!-- MAIN -->
-  <main class="main" id="main">
-
-    <!-- CONTROLS -->
-    <div class="controls">
-      <div class="filter-tabs">
-        <button class="filter-tab active" data-filter="latest">Latest</button>
-        <button class="filter-tab" data-filter="top">Top Rated</button>
-        <button class="filter-tab" data-filter="viewed">Most Viewed</button>
-      </div>
-      <span class="results-count" id="resultsCount">Showing 42 posts</span>
-      <div class="view-btns">
-        <button class="view-btn active" id="gridViewBtn" title="Grid view">
-          <span class="material-icons">grid_view</span>
-        </button>
-        <button class="view-btn" id="listViewBtn" title="List view">
-          <span class="material-icons">view_list</span>
-        </button>
+<!-- MAIN -->
+<main class="main" id="main">
+  <div class="active-tags-bar" id="activeTagsBar"></div>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button class="filter-chip active" onclick="setSort(this,'latest')">Latest</button>
+      <button class="filter-chip" onclick="setSort(this,'top')">Top Rated</button>
+      <button class="filter-chip" onclick="setSort(this,'views')">Most Viewed</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <span class="post-count" id="postCount"></span>
+      <div class="view-toggle">
+        <button class="view-btn active" onclick="setView('grid',this)"><span class="material-icons">apps</span></button>
+        <button class="view-btn" onclick="setView('list',this)"><span class="material-icons">view_list</span></button>
       </div>
     </div>
-
-    <!-- ACTIVE TAGS BAR -->
-    <div class="active-tags-bar" id="activeTagsBar"></div>
-
-    <!-- GRID -->
-    <div class="grid" id="postGrid"></div>
-
-    <!-- PAGINATION -->
-    <div class="pagination">
-      <button class="page-btn" disabled>
-        <span class="material-icons" style="font-size:18px">chevron_left</span>
-      </button>
-      <button class="page-btn active">1</button>
-      <button class="page-btn">2</button>
-      <button class="page-btn">3</button>
-      <span style="color:var(--text-dim);padding:0 4px">…</span>
-      <button class="page-btn">12</button>
-      <button class="page-btn">
-        <span class="material-icons" style="font-size:18px">chevron_right</span>
-      </button>
-    </div>
-  </main>
-</div>
-
-<!-- UPLOAD FAB -->
-<button class="upload-fab" id="uploadFab" title="Upload post">
-  <span class="material-icons">add</span>
-</button>
+  </div>
+  <div class="grid" id="grid"></div>
+  <div class="pagination" id="pagination"></div>
+</main>
 
 <!-- UPLOAD MODAL -->
-<div class="modal-overlay" id="modalOverlay">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title">Upload Post</span>
-      <button class="icon-btn" id="modalClose">
-        <span class="material-icons">close</span>
-      </button>
+<div class="modal-overlay" id="uploadModal" onclick="bgClose(event,'uploadModal')">
+  <div class="modal wide">
+    <h2>Upload Post</h2>
+    <p class="modal-sub">Share your content with the Kitty34 community</p>
+
+    <div id="dropzone" class="dropzone" ondragover="dzOver(event,true)" ondragleave="dzOver(event,false)" ondrop="dzDrop(event)">
+      <input type="file" id="fileInput" accept="image/*,video/*" onchange="fileSelected(event)">
+      <span class="material-icons dz-icon">cloud_upload</span>
+      <p>Drag & drop or <span>browse files</span></p>
+      <p style="font-size:.73rem;margin-top:4px;opacity:.7">Supports images and videos</p>
+    </div>
+    <div id="previewWrap" class="preview-wrap" style="display:none">
+      <img id="previewImg" style="display:none">
+      <video id="previewVid" controls style="display:none"></video>
+      <button class="preview-clear" onclick="clearFile()"><span class="material-icons">close</span></button>
     </div>
 
     <label>Title</label>
-    <input type="text" placeholder="Post title…" id="uploadTitle">
+    <input type="text" id="postTitle" placeholder="Give your post a title..." maxlength="80">
 
-    <label>Source URL (optional)</label>
-    <input type="text" placeholder="https://…">
-
-    <label>Tags — type and press Enter or comma</label>
-    <div class="modal-tags-list" id="modalTagsList">
-      <span style="color:var(--text-dim);font-size:.8rem;padding:2px 0">No tags added yet</span>
-    </div>
-    <div style="display:flex;gap:6px;margin-bottom:16px">
-      <input type="text" id="modalTagInput" placeholder="Add tag…" style="margin-bottom:0;flex:1">
-      <button class="tag-add-btn" id="modalTagAdd" style="width:38px;height:38px">
-        <span class="material-icons">add</span>
-      </button>
-    </div>
-
-    <!-- Popular tags to pick from -->
-    <label>Quick-add tags</label>
-    <div id="quickTagsWrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px"></div>
+    <label>Description <span style="opacity:.5;font-size:.75rem">(optional)</span></label>
+    <textarea id="postDesc" placeholder="Add a description..."></textarea>
 
     <label>Rating</label>
-    <select id="ratingSelect" style="margin-bottom:20px">
-      <option>Safe</option>
-      <option>Questionable</option>
-      <option>Explicit</option>
+    <select id="postRating">
+      <option value="safe">Safe</option>
+      <option value="questionable">Questionable</option>
+      <option value="explicit">Explicit</option>
     </select>
 
-    <button class="submit-btn" id="submitPost">Submit Post</button>
+    <label>Tags</label>
+    <div class="tag-input-modal">
+      <input type="text" id="postTagInput" placeholder="Type a tag and press Enter or Add..." onkeydown="if(event.key==='Enter')addPostTag()">
+      <button onclick="addPostTag()">Add</button>
+    </div>
+    <div class="post-tags-list" id="postTagsList"></div>
+
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn-primary" onclick="publishPost()"><span class="material-icons">publish</span>Publish</button>
+    </div>
   </div>
 </div>
 
+<!-- TAG MODAL -->
+<div class="modal-overlay" id="tagModal" onclick="bgClose(event,'tagModal')">
+  <div class="modal narrow">
+    <h2>Create a Tag</h2>
+    <p class="modal-sub">Add a new tag to organize and filter content.</p>
+    <label>Tag Name</label>
+    <input type="text" id="modalTagName" placeholder="e.g. cute, fantasy, action..." onkeydown="if(event.key==='Enter')createTag()">
+    <label>Category</label>
+    <select id="modalTagCat">
+      <option value="general">General</option>
+      <option value="character">Character</option>
+      <option value="artist">Artist</option>
+      <option value="copyright">Copyright</option>
+      <option value="meta">Meta</option>
+    </select>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('tagModal')">Cancel</button>
+      <button class="btn-primary" onclick="createTag()"><span class="material-icons">add</span>Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="lbBgClose(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav prev" onclick="lbNav(-1)"><span class="material-icons">chevron_left</span></button>
+  <button class="lightbox-nav next" onclick="lbNav(1)"><span class="material-icons">chevron_right</span></button>
+  <img class="lightbox-media" id="lbImg" style="display:none" alt="">
+  <video class="lightbox-media" id="lbVid" controls style="display:none"></video>
+  <div class="lightbox-info">
+    <div class="lightbox-title" id="lbTitle"></div>
+    <div class="lightbox-tags" id="lbTags"></div>
+    <div class="lightbox-actions">
+      <button class="lb-action-btn" onclick="lbLike()"><span class="material-icons">favorite_border</span><span id="lbLikeCount">0</span></button>
+      <button class="lb-action-btn" onclick="lbBookmark()"><span class="material-icons">bookmark_border</span>Bookmark</button>
+      <button class="lb-action-btn danger" id="lbDeleteBtn" onclick="deletePost()" style="display:none"><span class="material-icons">delete</span>Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-// ─── STATE ───────────────────────────────────────────────
-const state = {
-  sidebarOpen: true,
-  gridView: true,
-  userTags: ['original', 'fantasy', 'sci-fi', 'nature', 'portrait', 'anime', 'realistic'],
-  activeTags: [],
-  uploadTags: [],
+// ── STATE ──
+let sidebarOpen = window.innerWidth > 768;
+let darkTheme = true;
+let currentView = 'grid';
+let activeTags = [];
+let sortMode = 'latest';
+let viewMode = 'all';
+let currentPage = 1;
+let lbIdx = 0;
+const PER_PAGE = 32;
+
+let userTags  = JSON.parse(localStorage.getItem('k34_utags') || '[]');
+let posts     = JSON.parse(localStorage.getItem('k34_posts') || '[]');
+let bookmarks = JSON.parse(localStorage.getItem('k34_bm')    || '[]');
+let likes     = JSON.parse(localStorage.getItem('k34_lk')    || '[]');
+
+let pendingDataURL = null;
+let pendingIsVideo = false;
+let postTags = [];
+
+// ── PERSIST ──
+const save = () => {
+  localStorage.setItem('k34_posts', JSON.stringify(posts));
+  localStorage.setItem('k34_bm',    JSON.stringify(bookmarks));
+  localStorage.setItem('k34_lk',    JSON.stringify(likes));
 };
+const saveUT = () => localStorage.setItem('k34_utags', JSON.stringify(userTags));
 
-// ─── FAKE POST DATA ──────────────────────────────────────
-function genPosts(n) {
-  const colors = [
-    ['#1a1a2e','#e94560'],['#0f3460','#533483'],['#16213e','#e94560'],
-    ['#1b1b2f','#f5a623'],['#2d132c','#ee4540'],['#0a3d62','#60a3bc'],
-    ['#1e3799','#4a69bd'],['#192a56','#1e3799'],['#130f40','#30336b'],
-    ['#6f1e51','#b53471'],['#006266','#009432'],['#2c2c54','#7f8c8d'],
-  ];
-  const sampleTags = ['original','fantasy','portrait','nature','anime','sci-fi','realistic','digital art','pixel art','watercolor','abstract','character'];
-  const ratios = [1, 1.2, 0.75, 0.85, 1.35, 1.6, 0.9, 1.1];
-  return Array.from({length: n}, (_, i) => {
-    const [bg, fg] = colors[i % colors.length];
-    const r = ratios[i % ratios.length];
-    const isVideo = i % 7 === 3;
-    const likes = Math.floor(Math.random() * 99) + 1;
-    const tags = sampleTags.sort(() => .5 - Math.random()).slice(0, 3);
-    return { id: i+1, bg, fg, r, isVideo, likes, tags,
-      duration: `00:${String(Math.floor(Math.random()*59)+1).padStart(2,'0')}` };
-  });
-}
+// ── HELPERS ──
+function esc(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function uid(){ return 'p'+Date.now()+Math.random().toString(36).slice(2,7); }
 
-const posts = genPosts(42);
+// ── FILTERED POSTS ──
+function getFiltered(){
+  let r = [...posts];
+  if(viewMode==='bookmarks') r = r.filter(p=>bookmarks.includes(p.id));
+  else if(viewMode==='mine') r = r.filter(p=>p.mine);
+  else if(viewMode==='hot')  r = r.filter(p=>(p.likes||0)+(p.views||0)>3);
 
-// ─── RENDER GRID ─────────────────────────────────────────
-function renderGrid() {
-  const grid = document.getElementById('postGrid');
-  grid.innerHTML = '';
-  grid.className = state.gridView ? 'grid' : 'grid list-view';
-
-  const filtered = state.activeTags.length
-    ? posts.filter(p => state.activeTags.every(t => p.tags.includes(t)))
-    : posts;
-
-  document.getElementById('resultsCount').textContent = `Showing ${filtered.length} posts`;
-
-  filtered.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const h = Math.round(200 / p.r);
-    card.innerHTML = `
-      ${p.isVideo ? `<div class="video-badge"><span class="material-icons">play_arrow</span>${p.duration}</div>` : ''}
-      <div class="card-placeholder" style="height:${h}px;background:linear-gradient(135deg,${p.bg},${p.fg}20)">
-        <span class="material-icons" style="font-size:36px;color:${p.fg};opacity:.5">image</span>
-      </div>
-      <div class="card-overlay">
-        <div class="card-tags">
-          ${p.tags.map(t => `<span class="tag-chip" style="font-size:.68rem;padding:2px 6px">${t}</span>`).join('')}
-        </div>
-        <div class="card-likes">
-          <span class="material-icons">favorite</span>${p.likes}
-        </div>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-}
-
-// ─── SIDEBAR TAGS ─────────────────────────────────────────
-function renderSidebarTags() {
-  const list = document.getElementById('sidebarTagsList');
-  list.innerHTML = '';
-  state.userTags.forEach(tag => {
-    const chip = document.createElement('span');
-    chip.className = 'tag-chip' + (state.activeTags.includes(tag) ? ' active' : '');
-    chip.innerHTML = `${tag}<span class="remove-tag material-icons" data-tag="${tag}">close</span>`;
-    chip.querySelector('.remove-tag').addEventListener('click', e => {
-      e.stopPropagation();
-      state.userTags = state.userTags.filter(t => t !== tag);
-      state.activeTags = state.activeTags.filter(t => t !== tag);
-      renderSidebarTags();
-      renderActiveTags();
-      renderGrid();
-    });
-    chip.addEventListener('click', () => {
-      if (state.activeTags.includes(tag)) {
-        state.activeTags = state.activeTags.filter(t => t !== tag);
-      } else {
-        state.activeTags.push(tag);
-      }
-      renderSidebarTags();
-      renderActiveTags();
-      renderGrid();
-    });
-    list.appendChild(chip);
-  });
-}
-
-function addSidebarTag(val) {
-  const tag = val.trim().toLowerCase().replace(/\s+/g, '_');
-  if (!tag || state.userTags.includes(tag)) return;
-  state.userTags.push(tag);
-  renderSidebarTags();
-  renderQuickTags();
-}
-
-document.getElementById('sidebarTagAdd').addEventListener('click', () => {
-  const inp = document.getElementById('sidebarTagInput');
-  addSidebarTag(inp.value);
-  inp.value = '';
-});
-document.getElementById('sidebarTagInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ',') {
-    e.preventDefault();
-    addSidebarTag(e.target.value);
-    e.target.value = '';
+  if(activeTags.length){
+    r = r.filter(p => activeTags.every(t =>
+      (p.tags||[]).some(pt=>pt.includes(t)) || (p.title||'').toLowerCase().includes(t)
+    ));
   }
-});
 
-// ─── ACTIVE TAGS BAR ─────────────────────────────────────
-function renderActiveTags() {
-  const bar = document.getElementById('activeTagsBar');
-  bar.innerHTML = '';
-  state.activeTags.forEach(tag => {
-    const chip = document.createElement('span');
-    chip.className = 'tag-chip active';
-    chip.style.cssText = 'font-size:.8rem;padding:5px 10px;cursor:default';
-    chip.innerHTML = `<span class="material-icons" style="font-size:13px;margin-right:2px">label</span>${tag}<span class="material-icons remove-tag" style="cursor:pointer;font-size:14px" data-tag="${tag}">close</span>`;
-    chip.querySelector('.remove-tag').addEventListener('click', () => {
-      state.activeTags = state.activeTags.filter(t => t !== tag);
-      renderActiveTags();
-      renderSidebarTags();
-      renderGrid();
-    });
-    bar.appendChild(chip);
-  });
+  if(sortMode==='latest') r.sort((a,b)=>b.created-a.created);
+  else if(sortMode==='top') r.sort((a,b)=>(b.likes||0)-(a.likes||0));
+  else if(sortMode==='views') r.sort((a,b)=>(b.views||0)-(a.views||0));
+  return r;
 }
 
-// ─── UPLOAD MODAL TAGS ───────────────────────────────────
-function renderUploadTags() {
-  const list = document.getElementById('modalTagsList');
-  if (state.uploadTags.length === 0) {
-    list.innerHTML = '<span style="color:var(--text-dim);font-size:.8rem;padding:2px 0">No tags added yet</span>';
+// ── RENDER GRID ──
+function renderGrid(){
+  const grid = document.getElementById('grid');
+  grid.className = 'grid'+(currentView==='list'?' list-view':'');
+  const all = getFiltered();
+  const totalPages = Math.max(1,Math.ceil(all.length/PER_PAGE));
+  if(currentPage>totalPages) currentPage=totalPages;
+  const page = all.slice((currentPage-1)*PER_PAGE, currentPage*PER_PAGE);
+  document.getElementById('postCount').textContent = all.length ? all.length+' post'+(all.length!==1?'s':'') : '';
+
+  if(!page.length){
+    const label = viewMode==='bookmarks'?'bookmarked posts':viewMode==='mine'?'posts yet':'posts matching your search';
+    grid.innerHTML=`<div class="empty-state">
+      <span class="material-icons">photo_library</span>
+      <p>No ${label}</p>
+      <button onclick="openUploadModal()">Upload something</button>
+    </div>`;
+    document.getElementById('pagination').innerHTML='';
     return;
   }
-  list.innerHTML = '';
-  state.uploadTags.forEach(tag => {
-    const chip = document.createElement('span');
-    chip.className = 'modal-tag';
-    chip.innerHTML = `${tag}<button data-tag="${tag}">×</button>`;
-    chip.querySelector('button').addEventListener('click', () => {
-      state.uploadTags = state.uploadTags.filter(t => t !== tag);
-      renderUploadTags();
-    });
-    list.appendChild(chip);
-  });
+
+  grid.innerHTML = page.map(p=>{
+    const isNew = Date.now()-p.created < 90000;
+    const liked = likes.includes(p.id);
+    const bmd   = bookmarks.includes(p.id);
+    return `<div class="card" onclick="openLightbox(${all.indexOf(p)})">
+      ${p.type==='video'
+        ? `<video src="${p.src}" muted preload="metadata"></video>`
+        : `<img src="${p.src}" alt="${esc(p.title)}" loading="lazy">`}
+      ${isNew?'<div class="card-new">NEW</div>':''}
+      ${p.type==='video'?'<div class="card-badge"><span class="material-icons">play_arrow</span>video</div>':''}
+      <div class="card-overlay">
+        <div class="card-info">
+          <div class="card-title">${esc(p.title||'Untitled')}</div>
+          <div class="card-tags-row">${(p.tags||[]).slice(0,3).map(t=>`<span class="card-tag">${esc(t)}</span>`).join('')}</div>
+        </div>
+        <div class="card-actions">
+          <button class="card-like-btn ${liked?'liked':''}" onclick="event.stopPropagation();quickLike('${p.id}',this)">
+            <span class="material-icons">${liked?'favorite':'favorite_border'}</span>
+            <span id="lc-${p.id}">${p.likes||0}</span>
+          </button>
+          <button class="card-bm-btn" onclick="event.stopPropagation();quickBm('${p.id}',this)">
+            <span class="material-icons" style="color:${bmd?'#ffca28':'#fff'}">${bmd?'bookmark':'bookmark_border'}</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  renderPagination(totalPages);
 }
 
-function renderQuickTags() {
-  const wrap = document.getElementById('quickTagsWrap');
-  wrap.innerHTML = '';
-  state.userTags.slice(0, 12).forEach(tag => {
-    const chip = document.createElement('span');
-    chip.className = 'tag-chip' + (state.uploadTags.includes(tag) ? ' active' : '');
-    chip.textContent = tag;
-    chip.addEventListener('click', () => {
-      if (state.uploadTags.includes(tag)) {
-        state.uploadTags = state.uploadTags.filter(t => t !== tag);
-      } else {
-        state.uploadTags.push(tag);
-      }
-      renderUploadTags();
-      renderQuickTags();
-    });
-    wrap.appendChild(chip);
-  });
-}
-
-function addUploadTag(val) {
-  const tag = val.trim().toLowerCase().replace(/\s+/g, '_');
-  if (!tag || state.uploadTags.includes(tag)) return;
-  state.uploadTags.push(tag);
-  // also add to user tags if new
-  if (!state.userTags.includes(tag)) {
-    state.userTags.push(tag);
-    renderSidebarTags();
+// ── PAGINATION ──
+function renderPagination(tp){
+  const el=document.getElementById('pagination');
+  if(tp<=1){el.innerHTML='';return;}
+  let h=`<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}><span class="material-icons">chevron_left</span></button>`;
+  for(let i=1;i<=tp;i++){
+    if(tp>7&&i>2&&i<tp-1&&Math.abs(i-currentPage)>1){if(i===3)h+='<span style="color:var(--text-secondary);padding:0 4px">…</span>';continue;}
+    h+=`<button class="page-btn${i===currentPage?' active':''}" onclick="goPage(${i})">${i}</button>`;
   }
-  renderUploadTags();
-  renderQuickTags();
+  h+=`<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===tp?'disabled':''}><span class="material-icons">chevron_right</span></button>`;
+  el.innerHTML=h;
+}
+function goPage(p){currentPage=p;renderGrid();window.scrollTo({top:0,behavior:'smooth'});}
+
+// ── SIDEBAR ──
+function toggleSidebar(){
+  sidebarOpen=!sidebarOpen;
+  const s=document.getElementById('sidebar'),m=document.getElementById('main');
+  if(window.innerWidth>768){s.classList.toggle('hidden',!sidebarOpen);m.classList.toggle('full',!sidebarOpen);}
+  else s.classList.toggle('open',sidebarOpen);
+}
+function filterView(mode,el){
+  viewMode=mode;currentPage=1;
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  el.classList.add('active');
+  renderGrid();
+  if(window.innerWidth<=768){sidebarOpen=false;document.getElementById('sidebar').classList.remove('open');}
 }
 
-document.getElementById('modalTagAdd').addEventListener('click', () => {
-  const inp = document.getElementById('modalTagInput');
-  addUploadTag(inp.value);
-  inp.value = '';
-});
-document.getElementById('modalTagInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter' || e.key === ',') {
-    e.preventDefault();
-    addUploadTag(e.target.value);
-    e.target.value = '';
+// ── THEME ──
+function toggleTheme(){
+  darkTheme=!darkTheme;
+  document.documentElement.dataset.theme=darkTheme?'dark':'light';
+  document.getElementById('themeIcon').textContent=darkTheme?'nightlight_round':'wb_sunny';
+}
+
+// ── SORT / VIEW ──
+function setSort(btn,mode){
+  sortMode=mode;currentPage=1;
+  document.querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderGrid();
+}
+function setView(v,btn){
+  currentView=v;
+  document.querySelectorAll('.view-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');renderGrid();
+}
+
+// ── SEARCH ──
+function handleSearch(e){
+  if(e.key!=='Enter') return;
+  const val=e.target.value.trim().toLowerCase().replace(/\s+/g,'_');
+  if(!val) return;
+  if(!activeTags.includes(val)) activeTags.push(val);
+  e.target.value='';currentPage=1;renderActiveTagsBar();renderGrid();
+}
+
+// ── ACTIVE TAGS ──
+function renderActiveTagsBar(){
+  document.getElementById('activeTagsBar').innerHTML=activeTags.map(t=>
+    `<div class="active-tag" onclick="removeActiveTag('${t}')">${esc(t)}<span class="material-icons">close</span></div>`
+  ).join('');
+}
+function removeActiveTag(t){activeTags=activeTags.filter(x=>x!==t);currentPage=1;renderActiveTagsBar();renderGrid();}
+
+// ── USER TAGS ──
+function renderSidebarTags(){
+  document.getElementById('sidebarTagList').innerHTML=userTags.map((t,i)=>
+    `<div class="tag-chip" onclick="toggleActiveTag('${t}')">
+      ${esc(t)}<span class="material-icons" style="font-size:12px" onclick="event.stopPropagation();removeUT(${i})">close</span>
+    </div>`
+  ).join('') || '<span style="font-size:.73rem;color:var(--text-secondary)">No tags yet</span>';
+}
+function toggleActiveTag(tag){
+  activeTags=activeTags.includes(tag)?activeTags.filter(x=>x!==tag):[...activeTags,tag];
+  currentPage=1;renderActiveTagsBar();renderGrid();renderSidebarTags();
+}
+function addTagSidebar(){
+  const el=document.getElementById('sidebarTagInput');
+  const v=el.value.trim().toLowerCase().replace(/\s+/g,'_');
+  if(!v) return;
+  if(userTags.includes(v)){showToast('Tag already exists');return;}
+  userTags.push(v);saveUT();renderSidebarTags();el.value='';showToast(`Tag "${v}" added`);
+}
+function removeUT(i){
+  const t=userTags[i];userTags.splice(i,1);
+  activeTags=activeTags.filter(x=>x!==t);
+  saveUT();renderSidebarTags();renderActiveTagsBar();renderGrid();
+}
+function openTagModal(){document.getElementById('tagModal').classList.add('open');setTimeout(()=>document.getElementById('modalTagName').focus(),80);}
+function createTag(){
+  const n=document.getElementById('modalTagName').value.trim().toLowerCase().replace(/\s+/g,'_');
+  const c=document.getElementById('modalTagCat').value;
+  if(!n){showToast('Enter a tag name');return;}
+  if(userTags.includes(n)){showToast('Tag already exists');closeModal('tagModal');return;}
+  userTags.push(n);saveUT();renderSidebarTags();closeModal('tagModal');
+  document.getElementById('modalTagName').value='';
+  showToast(`Tag "${n}" [${c}] created`);
+}
+
+// ── UPLOAD ──
+function openUploadModal(){
+  pendingDataURL=null;pendingIsVideo=false;postTags=[];
+  ['postTitle','postDesc','postTagInput'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('postRating').value='safe';
+  renderPostTags();clearFile();
+  document.getElementById('uploadModal').classList.add('open');
+  setTimeout(()=>document.getElementById('postTitle').focus(),100);
+}
+function dzOver(e,on){e.preventDefault();document.getElementById('dropzone').classList.toggle('drag',on);}
+function dzDrop(e){e.preventDefault();document.getElementById('dropzone').classList.remove('drag');const f=e.dataTransfer.files[0];if(f)loadFile(f);}
+function fileSelected(e){const f=e.target.files[0];if(f)loadFile(f);}
+function loadFile(f){
+  if(!f.type.startsWith('image/')&&!f.type.startsWith('video/')){showToast('Only images and videos supported');return;}
+  if(f.size>50*1024*1024){showToast('File too large (max 50MB)');return;}
+  pendingIsVideo=f.type.startsWith('video/');
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    pendingDataURL=ev.target.result;
+    document.getElementById('dropzone').style.display='none';
+    document.getElementById('previewWrap').style.display='block';
+    const img=document.getElementById('previewImg'),vid=document.getElementById('previewVid');
+    if(pendingIsVideo){img.style.display='none';vid.style.display='block';vid.src=pendingDataURL;}
+    else{vid.style.display='none';img.style.display='block';img.src=pendingDataURL;}
+  };
+  reader.readAsDataURL(f);
+}
+function clearFile(){
+  pendingDataURL=null;pendingIsVideo=false;
+  document.getElementById('dropzone').style.display='block';
+  document.getElementById('previewWrap').style.display='none';
+  document.getElementById('previewImg').src='';
+  document.getElementById('previewVid').src='';
+  document.getElementById('fileInput').value='';
+}
+function addPostTag(){
+  const el=document.getElementById('postTagInput');
+  const v=el.value.trim().toLowerCase().replace(/\s+/g,'_');
+  if(!v||postTags.includes(v)){el.value='';return;}
+  postTags.push(v);
+  if(!userTags.includes(v)){userTags.push(v);saveUT();renderSidebarTags();}
+  renderPostTags();el.value='';
+}
+function removePostTag(t){postTags=postTags.filter(x=>x!==t);renderPostTags();}
+function renderPostTags(){
+  document.getElementById('postTagsList').innerHTML=postTags.map(t=>
+    `<div class="post-tag-chip">${esc(t)}<button onclick="removePostTag('${t}')">×</button></div>`
+  ).join('');
+}
+function publishPost(){
+  if(!pendingDataURL){showToast('Please select a file first');return;}
+  const title=document.getElementById('postTitle').value.trim();
+  const post={
+    id:uid(),src:pendingDataURL,
+    title:title||'Untitled',
+    desc:document.getElementById('postDesc').value.trim(),
+    rating:document.getElementById('postRating').value,
+    tags:[...postTags],
+    type:pendingIsVideo?'video':'image',
+    likes:0,views:0,created:Date.now(),mine:true
+  };
+  posts.unshift(post);save();
+  closeModal('uploadModal');
+  viewMode='all';currentPage=1;
+  document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+  renderGrid();showToast('Post published! 🎉');
+}
+
+// ── QUICK LIKE / BM ──
+function quickLike(id,btn){
+  const p=posts.find(x=>x.id===id);if(!p)return;
+  if(likes.includes(id)){
+    likes=likes.filter(x=>x!==id);p.likes=Math.max(0,(p.likes||0)-1);
+    btn.classList.remove('liked');btn.querySelector('.material-icons').textContent='favorite_border';
+  }else{
+    likes.push(id);p.likes=(p.likes||0)+1;
+    btn.classList.add('liked');btn.querySelector('.material-icons').textContent='favorite';
+  }
+  const lc=document.getElementById('lc-'+id);if(lc)lc.textContent=p.likes;
+  save();
+}
+function quickBm(id,btn){
+  if(bookmarks.includes(id)){
+    bookmarks=bookmarks.filter(x=>x!==id);btn.querySelector('.material-icons').style.color='#fff';btn.querySelector('.material-icons').textContent='bookmark_border';
+    showToast('Removed from bookmarks');
+  }else{
+    bookmarks.push(id);btn.querySelector('.material-icons').style.color='#ffca28';btn.querySelector('.material-icons').textContent='bookmark';
+    showToast('Bookmarked ⭐');
+  }
+  save();
+}
+
+// ── LIGHTBOX ──
+function openLightbox(idx){
+  const all=getFiltered();const p=all[idx];if(!p)return;
+  lbIdx=idx;p.views=(p.views||0)+1;save();
+  const lb=document.getElementById('lightbox');lb.classList.add('open');
+  document.getElementById('lbTitle').textContent=p.title||'Untitled';
+  document.getElementById('lbTags').innerHTML=(p.tags||[]).map(t=>
+    `<span class="lightbox-tag" onclick="filterByTag('${t}')">${esc(t)}</span>`
+  ).join('');
+  const liked=likes.includes(p.id);
+  const lbLikeBtn=lb.querySelector('.lb-action-btn');
+  lbLikeBtn.querySelector('.material-icons').textContent=liked?'favorite':'favorite_border';
+  document.getElementById('lbLikeCount').textContent=p.likes||0;
+  document.getElementById('lbDeleteBtn').style.display=p.mine?'flex':'none';
+  const img=document.getElementById('lbImg'),vid=document.getElementById('lbVid');
+  if(p.type==='video'){img.style.display='none';vid.style.display='block';vid.src=p.src;}
+  else{vid.style.display='none';vid.src='';img.style.display='block';img.src=p.src;}
+}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('open');document.getElementById('lbVid').src='';}
+function lbBgClose(e){if(e.target===e.currentTarget)closeLightbox();}
+function lbNav(d){const all=getFiltered();const n=lbIdx+d;if(n>=0&&n<all.length)openLightbox(n);}
+function lbLike(){
+  const all=getFiltered();const p=all[lbIdx];if(!p)return;
+  const btn=document.getElementById('lightbox').querySelector('.lb-action-btn');
+  quickLike(p.id,{classList:{contains:()=>likes.includes(p.id),remove:()=>{},add:()=>{}},querySelector:()=>btn.querySelector('.material-icons')});
+  // simpler: just toggle directly
+  const p2=posts.find(x=>x.id===p.id);
+  const icon=btn.querySelector('.material-icons');
+  if(likes.includes(p.id)){
+    likes=likes.filter(x=>x!==p.id);if(p2)p2.likes=Math.max(0,(p2.likes||0)-1);icon.textContent='favorite_border';
+  }else{
+    likes.push(p.id);if(p2)p2.likes=(p2.likes||0)+1;icon.textContent='favorite';
+  }
+  document.getElementById('lbLikeCount').textContent=p2?p2.likes:0;
+  save();renderGrid();
+}
+function lbBookmark(){
+  const all=getFiltered();const p=all[lbIdx];if(!p)return;
+  if(bookmarks.includes(p.id)){bookmarks=bookmarks.filter(x=>x!==p.id);showToast('Removed from bookmarks');}
+  else{bookmarks.push(p.id);showToast('Bookmarked ⭐');}
+  save();renderGrid();
+}
+function deletePost(){
+  const all=getFiltered();const p=all[lbIdx];if(!p)return;
+  if(!confirm('Delete this post?'))return;
+  posts=posts.filter(x=>x.id!==p.id);save();closeLightbox();renderGrid();showToast('Post deleted');
+}
+function filterByTag(tag){
+  closeLightbox();
+  if(!activeTags.includes(tag))activeTags.push(tag);
+  currentPage=1;renderActiveTagsBar();renderGrid();
+}
+
+// ── MODAL HELPERS ──
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function bgClose(e,id){if(e.target===e.currentTarget)closeModal(id);}
+
+// ── TOAST ──
+let tt;
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+// ── KEYBOARD ──
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('lightbox').classList.contains('open')){
+    if(e.key==='Escape')closeLightbox();
+    if(e.key==='ArrowLeft')lbNav(-1);
+    if(e.key==='ArrowRight')lbNav(1);
+  }else{
+    if(e.key==='Escape'){closeModal('uploadModal');closeModal('tagModal');}
   }
 });
 
-// ─── MODAL ───────────────────────────────────────────────
-const overlay = document.getElementById('modalOverlay');
-document.getElementById('uploadFab').addEventListener('click', () => {
-  state.uploadTags = [];
-  renderUploadTags();
-  renderQuickTags();
-  overlay.classList.add('open');
-});
-document.getElementById('modalClose').addEventListener('click', () => overlay.classList.remove('open'));
-overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
-
-document.getElementById('submitPost').addEventListener('click', () => {
-  const title = document.getElementById('uploadTitle').value.trim();
-  if (!title) { alert('Please enter a title.'); return; }
-  overlay.classList.remove('open');
-  document.getElementById('uploadTitle').value = '';
-});
-
-// ─── SIDEBAR TOGGLE ───────────────────────────────────────
-document.getElementById('menuToggle').addEventListener('click', () => {
-  const sidebar = document.getElementById('sidebar');
-  const main = document.getElementById('main');
-  state.sidebarOpen = !state.sidebarOpen;
-  sidebar.classList.toggle('collapsed', !state.sidebarOpen);
-  main.classList.toggle('full', !state.sidebarOpen);
-});
-
-// ─── VIEW TOGGLE ─────────────────────────────────────────
-document.getElementById('gridViewBtn').addEventListener('click', () => {
-  state.gridView = true;
-  document.getElementById('gridViewBtn').classList.add('active');
-  document.getElementById('listViewBtn').classList.remove('active');
-  renderGrid();
-});
-document.getElementById('listViewBtn').addEventListener('click', () => {
-  state.gridView = false;
-  document.getElementById('listViewBtn').classList.add('active');
-  document.getElementById('gridViewBtn').classList.remove('active');
-  renderGrid();
-});
-
-// ─── FILTER TABS ─────────────────────────────────────────
-document.querySelectorAll('.filter-tab').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-});
-
-// ─── NAV ITEMS ────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', e => {
-    e.preventDefault();
-    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-    item.classList.add('active');
-  });
-});
-
-// ─── PAGINATION ───────────────────────────────────────────
-document.querySelectorAll('.page-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (btn.disabled) return;
-    document.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  });
-});
-
-// ─── INIT ────────────────────────────────────────────────
-renderSidebarTags();
+// ── INIT ──
 renderGrid();
-renderQuickTags();
+renderSidebarTags();
 </script>
 </body>
 </html>
