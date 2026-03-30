@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ImageBoard</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Noto+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d10;
+    --surface: #16161d;
+    --surface2: #1e1e28;
+    --border: #2a2a38;
+    --accent: #e8445a;
+    --accent2: #ff6b35;
+    --text: #e8e8f0;
+    --text-dim: #7a7a9a;
+    --tag: #252535;
+    --tag-hover: #32324a;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── TOPBAR ─── */
+  .topbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 14px;
+    z-index: 200;
+  }
+
+  .menu-btn {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; display: flex; align-items: center;
+    padding: 6px; border-radius: 6px;
+    transition: color .2s, background .2s;
+  }
+  .menu-btn:hover { color: var(--text); background: var(--surface2); }
+
+  .logo {
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    font-size: 1.35rem;
+    letter-spacing: 2px;
+    color: var(--accent);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .logo span { color: var(--text-dim); }
+
+  .search-wrap {
+    flex: 1;
+    position: relative;
+    max-width: 640px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 44px 8px 14px;
+    color: var(--text);
+    font-size: .9rem;
+    font-family: 'Noto Sans', sans-serif;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .search-wrap input:focus { border-color: var(--accent); }
+  .search-wrap input::placeholder { color: var(--text-dim); }
+
+  .search-wrap .material-icons {
+    position: absolute; right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-dim); font-size: 20px; pointer-events: none;
+  }
+
+  .topbar-right {
+    display: flex; align-items: center; gap: 8px; margin-left: auto;
+  }
+
+  .icon-btn {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; padding: 6px; border-radius: 6px;
+    display: flex; align-items: center;
+    transition: color .2s, background .2s;
+  }
+  .icon-btn:hover { color: var(--text); background: var(--surface2); }
+
+  .theme-toggle { font-size: 20px; }
+
+  /* ─── LAYOUT ─── */
+  .layout {
+    display: flex;
+    padding-top: 56px;
+    min-height: 100vh;
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    position: fixed;
+    top: 56px; bottom: 0; left: 0;
+    overflow-y: auto;
+    transition: transform .3s ease;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar.collapsed { transform: translateX(-220px); }
+
+  .sidebar nav { padding: 12px 0; flex: 1; }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: .88rem;
+    font-weight: 500;
+    letter-spacing: .3px;
+    border-left: 3px solid transparent;
+    transition: all .15s;
+    cursor: pointer;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active {
+    color: var(--accent);
+    border-left-color: var(--accent);
+    background: rgba(232,68,90,.08);
+  }
+  .nav-item .material-icons { font-size: 20px; }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  /* ─── TAG SECTION IN SIDEBAR ─── */
+  .tag-section { padding: 12px; }
+  .tag-section-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: .75rem;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    padding: 0 6px 8px;
+  }
+
+  .tag-input-wrap {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  .tag-input-wrap input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--text);
+    font-size: .8rem;
+    font-family: 'Noto Sans', sans-serif;
+    outline: none;
+    transition: border-color .2s;
+  }
+  .tag-input-wrap input:focus { border-color: var(--accent); }
+  .tag-input-wrap input::placeholder { color: var(--text-dim); }
+  .tag-add-btn {
+    background: var(--accent);
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .2s, transform .1s;
+  }
+  .tag-add-btn:hover { background: #d03048; }
+  .tag-add-btn:active { transform: scale(.92); }
+  .tag-add-btn .material-icons { font-size: 18px; }
+
+  .tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--tag);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: .75rem;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all .15s;
+    user-select: none;
+  }
+  .tag-chip:hover { background: var(--tag-hover); color: var(--text); }
+  .tag-chip.active { background: rgba(232,68,90,.15); border-color: var(--accent); color: var(--accent); }
+  .tag-chip .remove-tag {
+    font-size: 13px;
+    color: var(--text-dim);
+    transition: color .15s;
+    line-height: 1;
+  }
+  .tag-chip:hover .remove-tag { color: var(--accent); }
+
+  /* ─── MAIN CONTENT ─── */
+  .main {
+    flex: 1;
+    margin-left: 220px;
+    transition: margin-left .3s ease;
+    padding: 20px;
+    min-width: 0;
+  }
+  .main.full { margin-left: 0; }
+
+  /* ─── CONTROLS ─── */
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px;
+  }
+
+  .filter-tab {
+    padding: 6px 16px;
+    border: none;
+    background: none;
+    color: var(--text-dim);
+    border-radius: 5px;
+    font-size: .85rem;
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .filter-tab:hover { color: var(--text); background: var(--surface2); }
+  .filter-tab.active { background: var(--accent); color: #fff; }
+
+  .view-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .view-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    padding: 6px;
+    cursor: pointer;
+    display: flex; align-items: center;
+    transition: all .15s;
+  }
+  .view-btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .view-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(232,68,90,.08); }
+  .view-btn .material-icons { font-size: 20px; }
+
+  .results-count {
+    color: var(--text-dim);
+    font-size: .82rem;
+  }
+
+  /* ─── ACTIVE TAGS BAR ─── */
+  .active-tags-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  .active-tags-bar:empty { display: none; }
+
+  /* ─── GRID ─── */
+  .grid {
+    columns: 5 200px;
+    column-gap: 10px;
+  }
+
+  .grid.list-view { columns: 1; }
+
+  .card {
+    break-inside: avoid;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    cursor: pointer;
+    position: relative;
+    transition: transform .2s, border-color .2s, box-shadow .2s;
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(232,68,90,.18);
+  }
+
+  .card-img {
+    width: 100%;
+    display: block;
+    aspect-ratio: attr(data-ratio);
+    object-fit: cover;
+    background: var(--surface2);
+  }
+
+  .card-placeholder {
+    width: 100%;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+  }
+
+  .card-overlay {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,.75));
+    padding: 20px 10px 8px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .card:hover .card-overlay { opacity: 1; }
+
+  .card-likes {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: .78rem;
+    color: #fff;
+  }
+  .card-likes .material-icons { font-size: 15px; color: var(--accent); }
+
+  .video-badge {
+    position: absolute;
+    top: 8px; left: 8px;
+    background: rgba(0,0,0,.7);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: .7rem;
+    color: #fff;
+    display: flex; align-items: center; gap: 3px;
+    backdrop-filter: blur(4px);
+  }
+  .video-badge .material-icons { font-size: 13px; }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 0 6px;
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: all .2s;
+  }
+  .card:hover .card-tags {
+    opacity: 1;
+    max-height: 40px;
+    padding: 6px;
+  }
+
+  /* LIST VIEW */
+  .grid.list-view .card {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+  }
+  .grid.list-view .card-placeholder {
+    width: 160px;
+    min-width: 160px;
+    height: 100px;
+    flex-shrink: 0;
+  }
+  .grid.list-view .card-overlay { display: none; }
+  .grid.list-view .card-info { padding: 10px 10px 10px 0; }
+
+  /* ─── PAGINATION ─── */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 32px;
+    padding-bottom: 24px;
+  }
+
+  .page-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    padding: 7px 13px;
+    font-size: .85rem;
+    font-family: 'Noto Sans', sans-serif;
+    cursor: pointer;
+    transition: all .15s;
+    display: flex; align-items: center;
+  }
+  .page-btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .page-btn:disabled { opacity: .35; cursor: not-allowed; }
+
+  /* ─── UPLOAD BUTTON ─── */
+  .upload-fab {
+    position: fixed;
+    bottom: 24px; right: 24px;
+    background: var(--accent);
+    border: none;
+    border-radius: 50%;
+    width: 52px; height: 52px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 20px rgba(232,68,90,.4);
+    transition: transform .2s, box-shadow .2s;
+    z-index: 150;
+  }
+  .upload-fab:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 28px rgba(232,68,90,.55);
+  }
+  .upload-fab .material-icons { font-size: 24px; }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.7);
+    backdrop-filter: blur(4px);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: min(520px, 95vw);
+    padding: 28px;
+    transform: translateY(20px);
+    transition: transform .25s ease;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .modal-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .modal label {
+    display: block;
+    font-size: .82rem;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    letter-spacing: .3px;
+  }
+  .modal input[type="text"], .modal textarea, .modal select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-size: .88rem;
+    font-family: 'Noto Sans', sans-serif;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color .2s;
+  }
+  .modal input:focus, .modal textarea:focus { border-color: var(--accent); }
+
+  .modal-tags-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 16px;
+    min-height: 32px;
+    padding: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+  }
+
+  .modal-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(232,68,90,.15);
+    border: 1px solid rgba(232,68,90,.3);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: .76rem;
+    color: var(--accent);
+  }
+  .modal-tag button {
+    background: none; border: none; color: inherit;
+    cursor: pointer; padding: 0; line-height: 1;
+    font-size: 15px;
+  }
+
+  .submit-btn {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    padding: 11px;
+    font-size: .95rem;
+    font-family: 'Rajdhani', sans-serif;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: background .2s;
+  }
+  .submit-btn:hover { background: #d03048; }
+
+  /* ─── SCROLLBAR ─── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-220px); }
+    .sidebar.open { transform: translateX(0); }
+    .main { margin-left: 0; }
+    .grid { columns: 2 130px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <button class="menu-btn" id="menuToggle">
+    <span class="material-icons">menu</span>
+  </button>
+  <a class="logo" href="#">IMAGE<span>BOARD</span></a>
+  <div class="search-wrap">
+    <input type="text" placeholder="Search tags, artists, series…" id="searchInput">
+    <span class="material-icons">search</span>
+  </div>
+  <div class="topbar-right">
+    <button class="icon-btn theme-toggle" id="themeToggle" title="Toggle theme">
+      <span class="material-icons">nightlight_round</span>
+    </button>
+    <button class="icon-btn" title="Account">
+      <span class="material-icons">account_circle</span>
+    </button>
+  </div>
+</header>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <nav>
+      <a class="nav-item active" href="#">
+        <span class="material-icons">home</span> Home
+      </a>
+      <a class="nav-item" href="#">
+        <span class="material-icons">whatshot</span> Hot
+      </a>
+      <a class="nav-item" href="#">
+        <span class="material-icons">star_border</span> Best
+      </a>
+      <a class="nav-item" href="#">
+        <span class="material-icons">subscriptions</span> Subscriptions
+      </a>
+      <div class="sidebar-divider"></div>
+      <a class="nav-item" href="#">
+        <span class="material-icons">bookmark</span> Bookmarks
+      </a>
+      <a class="nav-item" href="#">
+        <span class="material-icons">groups</span> Community
+      </a>
+    </nav>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- TAG MANAGER -->
+    <div class="tag-section">
+      <div class="tag-section-title">My Tags</div>
+      <div class="tag-input-wrap">
+        <input type="text" placeholder="Add a tag…" id="sidebarTagInput" maxlength="32">
+        <button class="tag-add-btn" id="sidebarTagAdd">
+          <span class="material-icons">add</span>
+        </button>
+      </div>
+      <div class="tags-list" id="sidebarTagsList"></div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="filter-tabs">
+        <button class="filter-tab active" data-filter="latest">Latest</button>
+        <button class="filter-tab" data-filter="top">Top Rated</button>
+        <button class="filter-tab" data-filter="viewed">Most Viewed</button>
+      </div>
+      <span class="results-count" id="resultsCount">Showing 42 posts</span>
+      <div class="view-btns">
+        <button class="view-btn active" id="gridViewBtn" title="Grid view">
+          <span class="material-icons">grid_view</span>
+        </button>
+        <button class="view-btn" id="listViewBtn" title="List view">
+          <span class="material-icons">view_list</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ACTIVE TAGS BAR -->
+    <div class="active-tags-bar" id="activeTagsBar"></div>
+
+    <!-- GRID -->
+    <div class="grid" id="postGrid"></div>
+
+    <!-- PAGINATION -->
+    <div class="pagination">
+      <button class="page-btn" disabled>
+        <span class="material-icons" style="font-size:18px">chevron_left</span>
+      </button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <span style="color:var(--text-dim);padding:0 4px">…</span>
+      <button class="page-btn">12</button>
+      <button class="page-btn">
+        <span class="material-icons" style="font-size:18px">chevron_right</span>
+      </button>
+    </div>
+  </main>
+</div>
+
+<!-- UPLOAD FAB -->
+<button class="upload-fab" id="uploadFab" title="Upload post">
+  <span class="material-icons">add</span>
+</button>
+
+<!-- UPLOAD MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Upload Post</span>
+      <button class="icon-btn" id="modalClose">
+        <span class="material-icons">close</span>
+      </button>
+    </div>
+
+    <label>Title</label>
+    <input type="text" placeholder="Post title…" id="uploadTitle">
+
+    <label>Source URL (optional)</label>
+    <input type="text" placeholder="https://…">
+
+    <label>Tags — type and press Enter or comma</label>
+    <div class="modal-tags-list" id="modalTagsList">
+      <span style="color:var(--text-dim);font-size:.8rem;padding:2px 0">No tags added yet</span>
+    </div>
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      <input type="text" id="modalTagInput" placeholder="Add tag…" style="margin-bottom:0;flex:1">
+      <button class="tag-add-btn" id="modalTagAdd" style="width:38px;height:38px">
+        <span class="material-icons">add</span>
+      </button>
+    </div>
+
+    <!-- Popular tags to pick from -->
+    <label>Quick-add tags</label>
+    <div id="quickTagsWrap" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px"></div>
+
+    <label>Rating</label>
+    <select id="ratingSelect" style="margin-bottom:20px">
+      <option>Safe</option>
+      <option>Questionable</option>
+      <option>Explicit</option>
+    </select>
+
+    <button class="submit-btn" id="submitPost">Submit Post</button>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+const state = {
+  sidebarOpen: true,
+  gridView: true,
+  userTags: ['original', 'fantasy', 'sci-fi', 'nature', 'portrait', 'anime', 'realistic'],
+  activeTags: [],
+  uploadTags: [],
+};
+
+// ─── FAKE POST DATA ──────────────────────────────────────
+function genPosts(n) {
+  const colors = [
+    ['#1a1a2e','#e94560'],['#0f3460','#533483'],['#16213e','#e94560'],
+    ['#1b1b2f','#f5a623'],['#2d132c','#ee4540'],['#0a3d62','#60a3bc'],
+    ['#1e3799','#4a69bd'],['#192a56','#1e3799'],['#130f40','#30336b'],
+    ['#6f1e51','#b53471'],['#006266','#009432'],['#2c2c54','#7f8c8d'],
+  ];
+  const sampleTags = ['original','fantasy','portrait','nature','anime','sci-fi','realistic','digital art','pixel art','watercolor','abstract','character'];
+  const ratios = [1, 1.2, 0.75, 0.85, 1.35, 1.6, 0.9, 1.1];
+  return Array.from({length: n}, (_, i) => {
+    const [bg, fg] = colors[i % colors.length];
+    const r = ratios[i % ratios.length];
+    const isVideo = i % 7 === 3;
+    const likes = Math.floor(Math.random() * 99) + 1;
+    const tags = sampleTags.sort(() => .5 - Math.random()).slice(0, 3);
+    return { id: i+1, bg, fg, r, isVideo, likes, tags,
+      duration: `00:${String(Math.floor(Math.random()*59)+1).padStart(2,'0')}` };
+  });
+}
+
+const posts = genPosts(42);
+
+// ─── RENDER GRID ─────────────────────────────────────────
+function renderGrid() {
+  const grid = document.getElementById('postGrid');
+  grid.innerHTML = '';
+  grid.className = state.gridView ? 'grid' : 'grid list-view';
+
+  const filtered = state.activeTags.length
+    ? posts.filter(p => state.activeTags.every(t => p.tags.includes(t)))
+    : posts;
+
+  document.getElementById('resultsCount').textContent = `Showing ${filtered.length} posts`;
+
+  filtered.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const h = Math.round(200 / p.r);
+    card.innerHTML = `
+      ${p.isVideo ? `<div class="video-badge"><span class="material-icons">play_arrow</span>${p.duration}</div>` : ''}
+      <div class="card-placeholder" style="height:${h}px;background:linear-gradient(135deg,${p.bg},${p.fg}20)">
+        <span class="material-icons" style="font-size:36px;color:${p.fg};opacity:.5">image</span>
+      </div>
+      <div class="card-overlay">
+        <div class="card-tags">
+          ${p.tags.map(t => `<span class="tag-chip" style="font-size:.68rem;padding:2px 6px">${t}</span>`).join('')}
+        </div>
+        <div class="card-likes">
+          <span class="material-icons">favorite</span>${p.likes}
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ─── SIDEBAR TAGS ─────────────────────────────────────────
+function renderSidebarTags() {
+  const list = document.getElementById('sidebarTagsList');
+  list.innerHTML = '';
+  state.userTags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip' + (state.activeTags.includes(tag) ? ' active' : '');
+    chip.innerHTML = `${tag}<span class="remove-tag material-icons" data-tag="${tag}">close</span>`;
+    chip.querySelector('.remove-tag').addEventListener('click', e => {
+      e.stopPropagation();
+      state.userTags = state.userTags.filter(t => t !== tag);
+      state.activeTags = state.activeTags.filter(t => t !== tag);
+      renderSidebarTags();
+      renderActiveTags();
+      renderGrid();
+    });
+    chip.addEventListener('click', () => {
+      if (state.activeTags.includes(tag)) {
+        state.activeTags = state.activeTags.filter(t => t !== tag);
+      } else {
+        state.activeTags.push(tag);
+      }
+      renderSidebarTags();
+      renderActiveTags();
+      renderGrid();
+    });
+    list.appendChild(chip);
+  });
+}
+
+function addSidebarTag(val) {
+  const tag = val.trim().toLowerCase().replace(/\s+/g, '_');
+  if (!tag || state.userTags.includes(tag)) return;
+  state.userTags.push(tag);
+  renderSidebarTags();
+  renderQuickTags();
+}
+
+document.getElementById('sidebarTagAdd').addEventListener('click', () => {
+  const inp = document.getElementById('sidebarTagInput');
+  addSidebarTag(inp.value);
+  inp.value = '';
+});
+document.getElementById('sidebarTagInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addSidebarTag(e.target.value);
+    e.target.value = '';
+  }
+});
+
+// ─── ACTIVE TAGS BAR ─────────────────────────────────────
+function renderActiveTags() {
+  const bar = document.getElementById('activeTagsBar');
+  bar.innerHTML = '';
+  state.activeTags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip active';
+    chip.style.cssText = 'font-size:.8rem;padding:5px 10px;cursor:default';
+    chip.innerHTML = `<span class="material-icons" style="font-size:13px;margin-right:2px">label</span>${tag}<span class="material-icons remove-tag" style="cursor:pointer;font-size:14px" data-tag="${tag}">close</span>`;
+    chip.querySelector('.remove-tag').addEventListener('click', () => {
+      state.activeTags = state.activeTags.filter(t => t !== tag);
+      renderActiveTags();
+      renderSidebarTags();
+      renderGrid();
+    });
+    bar.appendChild(chip);
+  });
+}
+
+// ─── UPLOAD MODAL TAGS ───────────────────────────────────
+function renderUploadTags() {
+  const list = document.getElementById('modalTagsList');
+  if (state.uploadTags.length === 0) {
+    list.innerHTML = '<span style="color:var(--text-dim);font-size:.8rem;padding:2px 0">No tags added yet</span>';
+    return;
+  }
+  list.innerHTML = '';
+  state.uploadTags.forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'modal-tag';
+    chip.innerHTML = `${tag}<button data-tag="${tag}">×</button>`;
+    chip.querySelector('button').addEventListener('click', () => {
+      state.uploadTags = state.uploadTags.filter(t => t !== tag);
+      renderUploadTags();
+    });
+    list.appendChild(chip);
+  });
+}
+
+function renderQuickTags() {
+  const wrap = document.getElementById('quickTagsWrap');
+  wrap.innerHTML = '';
+  state.userTags.slice(0, 12).forEach(tag => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip' + (state.uploadTags.includes(tag) ? ' active' : '');
+    chip.textContent = tag;
+    chip.addEventListener('click', () => {
+      if (state.uploadTags.includes(tag)) {
+        state.uploadTags = state.uploadTags.filter(t => t !== tag);
+      } else {
+        state.uploadTags.push(tag);
+      }
+      renderUploadTags();
+      renderQuickTags();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+function addUploadTag(val) {
+  const tag = val.trim().toLowerCase().replace(/\s+/g, '_');
+  if (!tag || state.uploadTags.includes(tag)) return;
+  state.uploadTags.push(tag);
+  // also add to user tags if new
+  if (!state.userTags.includes(tag)) {
+    state.userTags.push(tag);
+    renderSidebarTags();
+  }
+  renderUploadTags();
+  renderQuickTags();
+}
+
+document.getElementById('modalTagAdd').addEventListener('click', () => {
+  const inp = document.getElementById('modalTagInput');
+  addUploadTag(inp.value);
+  inp.value = '';
+});
+document.getElementById('modalTagInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    addUploadTag(e.target.value);
+    e.target.value = '';
+  }
+});
+
+// ─── MODAL ───────────────────────────────────────────────
+const overlay = document.getElementById('modalOverlay');
+document.getElementById('uploadFab').addEventListener('click', () => {
+  state.uploadTags = [];
+  renderUploadTags();
+  renderQuickTags();
+  overlay.classList.add('open');
+});
+document.getElementById('modalClose').addEventListener('click', () => overlay.classList.remove('open'));
+overlay.addEventListener('click', e => { if (e.target === overlay) overlay.classList.remove('open'); });
+
+document.getElementById('submitPost').addEventListener('click', () => {
+  const title = document.getElementById('uploadTitle').value.trim();
+  if (!title) { alert('Please enter a title.'); return; }
+  overlay.classList.remove('open');
+  document.getElementById('uploadTitle').value = '';
+});
+
+// ─── SIDEBAR TOGGLE ───────────────────────────────────────
+document.getElementById('menuToggle').addEventListener('click', () => {
+  const sidebar = document.getElementById('sidebar');
+  const main = document.getElementById('main');
+  state.sidebarOpen = !state.sidebarOpen;
+  sidebar.classList.toggle('collapsed', !state.sidebarOpen);
+  main.classList.toggle('full', !state.sidebarOpen);
+});
+
+// ─── VIEW TOGGLE ─────────────────────────────────────────
+document.getElementById('gridViewBtn').addEventListener('click', () => {
+  state.gridView = true;
+  document.getElementById('gridViewBtn').classList.add('active');
+  document.getElementById('listViewBtn').classList.remove('active');
+  renderGrid();
+});
+document.getElementById('listViewBtn').addEventListener('click', () => {
+  state.gridView = false;
+  document.getElementById('listViewBtn').classList.add('active');
+  document.getElementById('gridViewBtn').classList.remove('active');
+  renderGrid();
+});
+
+// ─── FILTER TABS ─────────────────────────────────────────
+document.querySelectorAll('.filter-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ─── NAV ITEMS ────────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// ─── PAGINATION ───────────────────────────────────────────
+document.querySelectorAll('.page-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    document.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// ─── INIT ────────────────────────────────────────────────
+renderSidebarTags();
+renderGrid();
+renderQuickTags();
+</script>
+</body>
+</html>
