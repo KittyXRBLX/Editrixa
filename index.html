@@ -1276,7 +1276,8 @@ let resources = [];
 let queue = [];
 let currentPlatform = 'youtube';
 let fpsFile = null, qualFile = null, resFile = null;
-let downloadBlob = null, downloadFilename = 'video.mp4';
+let downloadFilename = 'video.mp4';
+let activeDownloadUrl = null;
 
 // Default resources
 resources = [
@@ -1679,121 +1680,26 @@ async function loadFFmpegLib() {
 }
 
 // ==================== DOWNLOAD CENTER ====================
+
+// ⚙️ CONFIGURE YOUR API KEY HERE
+// Get a free key at https://video-download-api.com/get-api-key
+const VDA_API_KEY = 'b182a2a6d1b3a17385b532618b50a92184f1f7f4';
+const VDA_HOST = 'https://p.savenow.to';
+
 function selectPlatform(el) {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   currentPlatform = el.dataset.plat;
-
-  // Update placeholder
   const placeholders = {
-    youtube: 'https://www.youtube.com/watch?v=...',
-    spotify: 'https://open.spotify.com/track/...',
-    tiktok: 'https://www.tiktok.com/@user/video/...',
+    youtube:   'https://www.youtube.com/watch?v=...',
+    spotify:   'https://open.spotify.com/track/...',
+    tiktok:    'https://www.tiktok.com/@user/video/...',
     instagram: 'https://www.instagram.com/p/...',
-    streamable: 'https://streamable.com/...'
+    streamable:'https://streamable.com/...'
   };
   document.getElementById('dlUrl').placeholder = placeholders[currentPlatform] || 'Paste link here...';
   document.getElementById('dlResult').classList.remove('active');
   document.getElementById('dlError').style.display = 'none';
-}
-
-const PLATFORM_APIS = {
-  youtube: (url) => `https://noembed.com/embed?url=${encodeURIComponent(url)}`,
-  tiktok:  (url) => `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
-  instagram: (url) => `https://api.instagram.com/oembed?url=${encodeURIComponent(url)}`,
-  streamable: null,
-  spotify: null
-};
-
-async function fetchDownload() {
-  const url = document.getElementById('dlUrl').value.trim();
-  const dlError = document.getElementById('dlError');
-  const dlResult = document.getElementById('dlResult');
-
-  dlError.style.display = 'none';
-  dlResult.classList.remove('active');
-
-  if (!url) { showDlError('Please paste a URL.'); return; }
-
-  // Validate URL matches platform
-  const validators = {
-    youtube: /youtube\.com|youtu\.be/,
-    spotify: /spotify\.com/,
-    tiktok: /tiktok\.com/,
-    instagram: /instagram\.com/,
-    streamable: /streamable\.com/
-  };
-
-  if (validators[currentPlatform] && !validators[currentPlatform].test(url)) {
-    showDlError(`This URL doesn't look like a ${currentPlatform} link.`);
-    return;
-  }
-
-  const format = document.getElementById('dlFormat').value;
-  const quality = document.getElementById('dlQuality').value;
-
-  // For YouTube, use noembed to get metadata
-  if (currentPlatform === 'youtube') {
-    try {
-      const resp = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(url)}`);
-      const data = await resp.json();
-      if (data.error) throw new Error(data.error);
-
-      document.getElementById('dlTitle').textContent = data.title || 'YouTube Video';
-      document.getElementById('dlMeta').textContent = `YouTube · ${format.toUpperCase()} · ${quality === 'best' ? 'Best Quality' : quality + 'p'}`;
-
-      const thumb = document.getElementById('dlThumb');
-      if (data.thumbnail_url) {
-        thumb.innerHTML = `<img src="${data.thumbnail_url}" style="width:80px;height:56px;object-fit:cover;border-radius:3px;" onerror="this.parentElement.innerHTML='🎬'">`;
-      } else {
-        thumb.innerHTML = '🎬';
-      }
-
-      // Use a public YouTube download proxy (cobalt.tools API style approach)
-      downloadBlob = null;
-      downloadFilename = (data.title || 'video').replace(/[^a-z0-9]/gi, '_') + '.' + format;
-      document.getElementById('dlResult').classList.add('active');
-
-    } catch(e) {
-      showDlError('Could not fetch video info: ' + e.message);
-    }
-    return;
-  }
-
-  // For TikTok using oembed
-  if (currentPlatform === 'tiktok') {
-    try {
-      const resp = await fetch(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`);
-      const data = await resp.json();
-      document.getElementById('dlTitle').textContent = data.title || 'TikTok Video';
-      document.getElementById('dlMeta').textContent = `TikTok · ${format.toUpperCase()} · ${quality === 'best' ? 'Best' : quality + 'p'}`;
-      document.getElementById('dlThumb').innerHTML = data.thumbnail_url
-        ? `<img src="${data.thumbnail_url}" style="width:80px;height:56px;object-fit:cover;border-radius:3px;" onerror="this.parentElement.innerHTML='🎬'">`
-        : '🎬';
-      downloadFilename = 'tiktok_video.' + format;
-      downloadBlob = null;
-      document.getElementById('dlResult').classList.add('active');
-    } catch(e) {
-      // Fallback if CORS blocks
-      document.getElementById('dlTitle').textContent = 'TikTok Video';
-      document.getElementById('dlMeta').textContent = `TikTok · ${format.toUpperCase()}`;
-      document.getElementById('dlThumb').innerHTML = '🎬';
-      downloadFilename = 'tiktok_video.' + format;
-      downloadBlob = null;
-      document.getElementById('dlResult').classList.add('active');
-    }
-    return;
-  }
-
-  // Generic handler for other platforms
-  const platformNames = { spotify: 'Spotify', instagram: 'Instagram', streamable: 'Streamable' };
-  const emojis = { spotify: '🎵', instagram: '📷', streamable: '📹' };
-  document.getElementById('dlTitle').textContent = platformNames[currentPlatform] + ' Content';
-  document.getElementById('dlMeta').textContent = `${platformNames[currentPlatform]} · ${format.toUpperCase()} · ${quality === 'best' ? 'Best Quality' : quality + 'p'}`;
-  document.getElementById('dlThumb').innerHTML = emojis[currentPlatform] || '📦';
-  downloadFilename = currentPlatform + '_content.' + format;
-  downloadBlob = null;
-  document.getElementById('dlResult').classList.add('active');
 }
 
 function showDlError(msg) {
@@ -1802,70 +1708,166 @@ function showDlError(msg) {
   dlError.style.display = 'block';
 }
 
-async function triggerDownload() {
+// Get platform metadata (title / thumb) via noembed where possible
+async function getPlatformMeta(url, platform) {
+  const platformNames = { youtube:'YouTube', spotify:'Spotify', tiktok:'TikTok', instagram:'Instagram', streamable:'Streamable' };
+  const emojis        = { youtube:'🎬', spotify:'🎵', tiktok:'🎵', instagram:'📷', streamable:'📹' };
+
+  try {
+    if (platform === 'youtube' || platform === 'tiktok' || platform === 'instagram') {
+      const oembedEndpoints = {
+        youtube:   `https://noembed.com/embed?url=${encodeURIComponent(url)}`,
+        tiktok:    `https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`,
+        instagram: `https://api.instagram.com/oembed?url=${encodeURIComponent(url)}`
+      };
+      const resp = await fetch(oembedEndpoints[platform]);
+      const data = await resp.json();
+      return {
+        title: data.title || data.author_name || platformNames[platform] + ' Video',
+        thumb: data.thumbnail_url || null,
+        emoji: emojis[platform]
+      };
+    }
+  } catch(_) {}
+
+  return { title: platformNames[platform] + ' Content', thumb: null, emoji: emojis[platform] };
+}
+
+let activeJobId = null;
+let pollTimer   = null;
+
+async function fetchDownload() {
   const url = document.getElementById('dlUrl').value.trim();
-  const format = document.getElementById('dlFormat').value;
+  const dlError  = document.getElementById('dlError');
+  const dlResult = document.getElementById('dlResult');
+
+  dlError.style.display = 'none';
+  dlResult.classList.remove('active');
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+
+  if (!url) { showDlError('Please paste a URL.'); return; }
+
+  const validators = {
+    youtube:   /youtube\.com|youtu\.be/,
+    spotify:   /spotify\.com/,
+    tiktok:    /tiktok\.com/,
+    instagram: /instagram\.com/,
+    streamable:/streamable\.com/
+  };
+  if (validators[currentPlatform] && !validators[currentPlatform].test(url)) {
+    showDlError(`This URL doesn't look like a ${currentPlatform} link.`);
+    return;
+  }
+
+  if (!VDA_API_KEY || VDA_API_KEY === 'YOUR_API_KEY_HERE') {
+    showDlError('No API key set. Open the site source and add your key from video-download-api.com.');
+    return;
+  }
+
+  const format  = document.getElementById('dlFormat').value;
   const quality = document.getElementById('dlQuality').value;
 
-  // Use cobalt.tools API for actual download (public, no key needed for basic use)
-  try {
-    toast('Preparing download...', '');
+  // Show loading state
+  document.getElementById('dlTitle').textContent = 'Fetching info...';
+  document.getElementById('dlMeta').textContent  = 'Please wait';
+  document.getElementById('dlThumb').innerHTML   = '<div class="spinner"></div>';
+  dlResult.classList.add('active');
 
-    // Try cobalt.tools - a free open-source media downloader API
-    const cobaltUrl = 'https://api.cobalt.tools/api/json';
-    const body = {
-      url: url,
-      vCodec: 'h264',
-      vQuality: quality === 'best' ? '1080' : quality,
-      aFormat: format === 'mp3' ? 'mp3' : 'ogg',
-      isAudioOnly: format === 'mp3',
-      disableMetadata: false
-    };
+  // Get metadata in parallel with kicking off the job
+  const [meta] = await Promise.allSettled([getPlatformMeta(url, currentPlatform)]);
+  const { title, thumb, emoji } = meta.status === 'fulfilled' ? meta.value : { title: 'Video', thumb: null, emoji: '🎬' };
 
-    const resp = await fetch(cobaltUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(body)
-    });
+  document.getElementById('dlTitle').textContent = title;
+  downloadFilename = title.replace(/[^a-z0-9]/gi, '_').slice(0, 60) + '.' + format;
 
-    const data = await resp.json();
-
-    if (data.status === 'stream' || data.status === 'redirect') {
-      const a = document.createElement('a');
-      a.href = data.url;
-      a.download = downloadFilename;
-      a.target = '_blank';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      toast('Download started!', 'success');
-    } else if (data.status === 'picker') {
-      // Multiple streams available — use first
-      if (data.picker && data.picker[0]) {
-        const a = document.createElement('a');
-        a.href = data.picker[0].url;
-        a.download = downloadFilename;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        toast('Download started!', 'success');
-      }
-    } else if (data.status === 'error') {
-      toast('Download error: ' + (data.text || 'Unknown error'), 'error');
-    } else {
-      // Fallback
-      window.open(url, '_blank');
-      toast('Opened in new tab — save from there.', '');
-    }
-  } catch(e) {
-    // If cobalt fails, open the original URL
-    toast('Direct download unavailable — opening source page.', 'error');
-    window.open(url, '_blank');
+  if (thumb) {
+    document.getElementById('dlThumb').innerHTML = `<img src="${thumb}" style="width:80px;height:56px;object-fit:cover;border-radius:3px;" onerror="this.parentElement.innerHTML='${emoji}'">`;
+  } else {
+    document.getElementById('dlThumb').innerHTML = emoji;
   }
+
+  // Submit download job to video-download-api.com
+  try {
+    const jobUrl = `${VDA_HOST}/ajax/download.php?format=${encodeURIComponent(format)}&url=${encodeURIComponent(url)}&apikey=${encodeURIComponent(VDA_API_KEY)}`;
+    const jobResp = await fetch(jobUrl);
+    const jobData = await jobResp.json();
+
+    if (!jobData.success || !jobData.id) {
+      throw new Error(jobData.error || jobData.message || 'Job creation failed');
+    }
+
+    activeJobId = jobData.id;
+    document.getElementById('dlMeta').textContent = `${currentPlatform.charAt(0).toUpperCase()+currentPlatform.slice(1)} · ${format.toUpperCase()} · Queued — polling…`;
+
+    // Start polling for job completion
+    let attempts = 0;
+    pollTimer = setInterval(async () => {
+      attempts++;
+      if (attempts > 60) { // 2 min timeout
+        clearInterval(pollTimer);
+        document.getElementById('dlMeta').textContent = 'Timed out. Try again.';
+        toast('Download timed out.', 'error');
+        return;
+      }
+      try {
+        const progUrl = `${VDA_HOST}/ajax/progress?id=${encodeURIComponent(activeJobId)}&apikey=${encodeURIComponent(VDA_API_KEY)}`;
+        const progResp = await fetch(progUrl);
+        const progData = await progResp.json();
+
+        const pct = Math.min(Math.round((progData.progress || 0) / 1000 * 100), 99);
+        document.getElementById('dlMeta').textContent =
+          `${currentPlatform.charAt(0).toUpperCase()+currentPlatform.slice(1)} · ${format.toUpperCase()} · Processing ${pct}%`;
+
+        // progress === 1000 means ready
+        if (progData.progress >= 1000 || progData.download_url || progData.url) {
+          clearInterval(pollTimer);
+          const fileUrl = progData.download_url || progData.url || progData.file_url;
+          if (fileUrl) {
+            activeDownloadUrl = fileUrl;
+            const qualLabel = quality === 'best' ? 'Best Quality' : quality + 'p';
+            document.getElementById('dlMeta').textContent =
+              `${currentPlatform.charAt(0).toUpperCase()+currentPlatform.slice(1)} · ${format.toUpperCase()} · ${qualLabel} · ✅ Ready`;
+            toast('File ready — click Download!', 'success');
+            // Swap button to show it's ready
+            const dlBtn = dlResult.querySelector('button');
+            dlBtn.textContent = '⬇ Download File';
+            dlBtn.style.background = 'var(--accent)';
+          } else {
+            document.getElementById('dlMeta').textContent = 'Processing complete — no URL returned.';
+          }
+        }
+
+        if (progData.error) {
+          clearInterval(pollTimer);
+          showDlError('API error: ' + progData.error);
+          dlResult.classList.remove('active');
+        }
+      } catch(e) {
+        // Silently retry on network hiccup
+      }
+    }, 2000); // poll every 2 seconds
+
+  } catch(e) {
+    showDlError('Could not start download: ' + e.message);
+    dlResult.classList.remove('active');
+  }
+}
+
+
+async function triggerDownload() {
+  if (!activeDownloadUrl) {
+    toast('File not ready yet — still processing…', '');
+    return;
+  }
+  // Open the download URL from the API
+  const a = document.createElement('a');
+  a.href = activeDownloadUrl;
+  a.download = downloadFilename;
+  a.target = '_blank';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  toast('Download started!', 'success');
 }
 
 // ==================== INIT ====================
