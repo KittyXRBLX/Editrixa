@@ -564,7 +564,11 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shado
 
         <div class="api-note">
           <span class="api-note-icon">ℹ</span>
-          <span>Powered by <strong style="color:var(--accent2)">Cobalt.tools</strong> — a free, open-source downloader with no ads or tracking. Links open in a new tab to start your download directly.</span>
+          <span>
+            YouTube uses <strong style="color:#ff5555">ytdown.to</strong> &nbsp;·&nbsp;
+            TikTok uses <strong style="color:#00f2ea">tiktokio.com</strong>.
+            Clicking <em>Download</em> opens the site in a new tab with your link pre-filled — just hit the download button there.
+          </span>
         </div>
 
         <div class="url-row">
@@ -572,7 +576,7 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shado
           <button class="btn btn-primary" onclick="fetchDownload()">Fetch</button>
         </div>
 
-        <div class="format-row">
+        <div class="format-row" id="dlFormatRow">
           <select class="form-select" id="dlFormat">
             <option value="mp4">MP4 — Video</option>
             <option value="mp3">MP3 — Audio Only</option>
@@ -690,12 +694,17 @@ input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); box-shado
       <input type="text" class="form-input" id="resCat" placeholder="e.g. Anime Cutout, Overlay, VFX...">
     </div>
     <div class="form-group">
-      <label class="form-label">File (Image or Archive)</label>
+      <label class="form-label">File (Image, Video or Archive)</label>
       <div class="drop-zone" id="resDropZone" style="padding:22px 16px;">
-        <input type="file" id="resFileInput" accept="image/*,.zip,.rar,.7z,.psd">
-        <span class="drop-icon" style="font-size:24px;">📁</span>
+        <input type="file" id="resFileInput" accept="image/*,video/*,.zip,.rar,.7z,.psd">
+        <span class="drop-icon" style="font-size:24px;" id="resDropIcon">📁</span>
         <p><strong>Drop file here</strong> or click to browse</p>
+        <p style="font-size:11px;margin-top:3px;color:var(--muted2)">Images · Videos · ZIP · PSD</p>
         <div class="drop-file-name" id="resFileName"></div>
+      </div>
+      <!-- video preview inside modal -->
+      <div id="resVideoPreviewWrap" style="display:none;margin-top:10px;border-radius:10px;overflow:hidden;background:var(--surface3);border:1px solid var(--border);">
+        <video id="resVideoPreview" controls style="width:100%;max-height:200px;display:block;"></video>
       </div>
     </div>
     <div class="modal-divider"></div>
@@ -799,7 +808,20 @@ function setupDrop(zoneId, inputId, nameId, cb) {
 }
 setupDrop('fpsDropZone',  'fpsFileInput',  'fpsFileName',  f => fpsFile  = f);
 setupDrop('qualDropZone', 'qualFileInput', 'qualFileName', f => qualFile = f);
-setupDrop('resDropZone',  'resFileInput',  'resFileName',  f => resFile  = f);
+setupDrop('resDropZone',  'resFileInput',  'resFileName',  f => {
+  resFile = f;
+  const isVideo = f.type.startsWith('video/');
+  document.getElementById('resDropIcon').textContent = isVideo ? '🎬' : (f.type.startsWith('image/') ? '🖼️' : '📁');
+  const prevWrap = document.getElementById('resVideoPreviewWrap');
+  const prevVid  = document.getElementById('resVideoPreview');
+  if (isVideo) {
+    prevVid.src = URL.createObjectURL(f);
+    prevWrap.style.display = 'block';
+  } else {
+    prevWrap.style.display = 'none';
+    prevVid.src = '';
+  }
+});
 
 /* ── FPS SLIDERS ── */
 document.getElementById('fpsSlider').addEventListener('input', function() { document.getElementById('fpsValue').textContent = this.value; });
@@ -897,9 +919,10 @@ async function loadFFmpegLib() {
 }
 
 /* ── DOWNLOAD CENTER ──
-   Uses cobalt.tools — free, open-source, no-tracking downloader.
-   API docs: https://github.com/imputnet/cobalt/blob/main/docs/api.md
-   Public instance: https://api.cobalt.tools
+   YouTube  → app.ytdown.to/en27/   (paste URL, site handles download)
+   TikTok   → tiktokio.com          (paste URL, site handles download)
+   We pre-fill the URL via query-string where supported, otherwise just
+   open the site and copy the URL to the clipboard automatically.
 */
 function selectPlatform(el) {
   document.querySelectorAll('.chip').forEach(c => c.classList.remove('selected'));
@@ -910,6 +933,8 @@ function selectPlatform(el) {
     tiktok:  'https://www.tiktok.com/@user/video/...'
   };
   document.getElementById('dlUrl').placeholder = ph[currentPlatform] || 'Paste link here...';
+  // show/hide quality row — not relevant for TikTok
+  document.getElementById('dlFormatRow').style.display = currentPlatform === 'youtube' ? 'grid' : 'none';
   document.getElementById('dlResult').classList.remove('active');
   document.getElementById('dlError').style.display = 'none';
 }
@@ -920,7 +945,7 @@ function showDlError(msg) {
   el.style.display = 'block';
 }
 
-async function fetchDownload() {
+function fetchDownload() {
   const url     = document.getElementById('dlUrl').value.trim();
   const dlError = document.getElementById('dlError');
   const dlResult= document.getElementById('dlResult');
@@ -939,101 +964,56 @@ async function fetchDownload() {
     return;
   }
 
-  const format  = document.getElementById('dlFormat').value;
-  const quality = document.getElementById('dlQuality').value;
-  const isAudio = format === 'mp3';
-
-  // Show pending state
-  document.getElementById('dlTitle').textContent = 'Fetching…';
-  document.getElementById('dlMeta').textContent  = 'Contacting cobalt.tools…';
-  document.getElementById('dlThumb').innerHTML   = '<div class="spinner" style="margin:auto;"></div>';
-  dlResult.classList.add('active');
-
-  try {
-    // cobalt.tools public API
-    const body = {
-      url: url,
-      vCodec: 'h264',
-      vQuality: quality,
-      aFormat: 'mp3',
-      isAudioOnly: isAudio,
-      isNoTTWatermark: true,
-      isTTFullAudio: false,
-      isAudioMuted: false,
-      dubLang: false,
-      disableMetadata: false
-    };
-
-    const resp = await fetch('https://api.cobalt.tools/api/json', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(body)
-    });
-
-    const data = await resp.json();
-
-    if (data.status === 'error' || data.status === 'rate-limit') {
-      throw new Error(data.text || 'cobalt API error');
-    }
-
-    // Success — direct download URL
-    if (data.status === 'stream' || data.status === 'redirect' || data.url) {
-      const fileUrl = data.url;
-      activeDownloadUrl = fileUrl;
-      downloadFilename  = (currentPlatform + '_video.' + (isAudio ? 'mp3' : 'mp4'));
-
-      const platformLabel = currentPlatform === 'youtube' ? 'YouTube' : 'TikTok';
-      document.getElementById('dlTitle').textContent = platformLabel + ' Video';
-      document.getElementById('dlMeta').textContent  = `${format.toUpperCase()} · ${isAudio ? 'Audio' : quality + 'p'} · ✅ Ready`;
-
-      // Platform icon in thumb
-      if (currentPlatform === 'youtube') {
-        document.getElementById('dlThumb').innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="#ff4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
-      } else {
-        document.getElementById('dlThumb').innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="#00f2ea"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.75a8.16 8.16 0 0 0 4.77 1.52V6.82a4.85 4.85 0 0 1-1-.13z"/></svg>`;
-      }
-      toast('Ready — click Download!', 'success');
-    } else if (data.status === 'picker') {
-      // cobalt returns picker for some videos (e.g. TikTok photos)
-      activeDownloadUrl = data.picker[0].url;
-      downloadFilename = currentPlatform + '_media.' + (isAudio ? 'mp3' : 'mp4');
-      document.getElementById('dlTitle').textContent = 'Media Ready';
-      document.getElementById('dlMeta').textContent  = `${data.picker.length} item(s) found · ✅ Ready`;
-      toast('Ready — click Download!', 'success');
-    } else {
-      throw new Error('Unexpected response from cobalt: ' + data.status);
-    }
-
-  } catch(e) {
-    // CORS fallback — open cobalt.tools in new tab with prefilled URL
-    document.getElementById('dlTitle').textContent = 'Open in cobalt.tools';
-    document.getElementById('dlMeta').textContent  = 'Browser blocked direct API — click below to open';
-    document.getElementById('dlThumb').innerHTML   = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`;
-
-    // Store cobalt.tools deep link as fallback
-    activeDownloadUrl = `https://cobalt.tools/#${encodeURIComponent(url)}`;
-    downloadFilename  = null; // signal to open in new tab
-
-    document.getElementById('dlResult').querySelector('.btn').textContent = '↗ Open cobalt.tools';
-    toast('API blocked by browser — will open cobalt.tools instead.', 'info');
+  // Build the target downloader URL
+  let targetSite = '';
+  if (currentPlatform === 'youtube') {
+    // ytdown.to accepts ?url= param
+    targetSite = `https://app.ytdown.to/en27/?url=${encodeURIComponent(url)}`;
+  } else {
+    // tiktokio.com — we open the site; URL is copied to clipboard for easy paste
+    targetSite = `https://tiktokio.com/`;
   }
+
+  activeDownloadUrl = targetSite;
+
+  // Show result card
+  const platformLabel = currentPlatform === 'youtube' ? 'YouTube' : 'TikTok';
+  const siteLabel     = currentPlatform === 'youtube' ? 'ytdown.to' : 'tiktokio.com';
+
+  document.getElementById('dlTitle').textContent = platformLabel + ' Video';
+  document.getElementById('dlMeta').textContent  = `Opens ${siteLabel} → paste or auto-filled · ✅ Ready`;
+
+  if (currentPlatform === 'youtube') {
+    document.getElementById('dlThumb').innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="#ff4444"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>`;
+  } else {
+    document.getElementById('dlThumb').innerHTML = `<svg width="28" height="28" viewBox="0 0 24 24" fill="#00f2ea"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.75a8.16 8.16 0 0 0 4.77 1.52V6.82a4.85 4.85 0 0 1-1-.13z"/></svg>`;
+  }
+
+  // Update button label
+  const btn = document.querySelector('#dlResult .btn');
+  btn.textContent = currentPlatform === 'youtube'
+    ? '↗ Open ytdown.to'
+    : '↗ Open tiktokio.com';
+
+  dlResult.classList.add('active');
+  toast('Ready — click the button to open the downloader!', 'info');
 }
 
 async function triggerDownload() {
-  if (!activeDownloadUrl) { toast('File not ready yet.', 'info'); return; }
-  if (downloadFilename === null) {
-    // Fallback: open cobalt.tools
-    window.open(activeDownloadUrl, '_blank');
-    return;
+  if (!activeDownloadUrl) { toast('Click Fetch first.', 'info'); return; }
+
+  // For TikTok: copy the URL to clipboard so they can easily paste it on tiktokio.com
+  if (currentPlatform === 'tiktok') {
+    const vidUrl = document.getElementById('dlUrl').value.trim();
+    try {
+      await navigator.clipboard.writeText(vidUrl);
+      toast('TikTok link copied! Paste it on tiktokio.com ↗', 'success');
+    } catch(_) {
+      toast('Opening tiktokio.com — paste your link there.', 'info');
+    }
   }
-  const a = document.createElement('a');
-  a.href = activeDownloadUrl;
-  a.download = downloadFilename;
-  a.target = '_blank';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  toast('Download started!', 'success');
+
+  window.open(activeDownloadUrl, '_blank');
 }
 
 /* ── ADMIN ── */
@@ -1067,21 +1047,36 @@ function renderResources() {
     grid.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📦</div><p>${query ? 'No results for "' + query + '".' : 'No resources yet.<br>Be the first to upload something!'}</p></div>`;
     return;
   }
-  grid.innerHTML = filtered.map(r => `
+  grid.innerHTML = filtered.map(r => {
+    const isVid = r.fileType === 'video';
+    const thumb = r.dataUrl
+      ? (isVid
+          ? `<video src="${r.dataUrl}" style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;" muted playsinline preload="metadata"></video>
+             <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+               <div style="width:40px;height:40px;background:rgba(0,0,0,0.6);border-radius:50%;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+                 <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+               </div>
+             </div>`
+          : `<img src="${r.dataUrl}" alt="${r.name}">`)
+      : `<span style="font-size:44px">${r.emoji||'📦'}</span>`;
+    return `
     <div class="res-card" onclick="downloadResource(${r.id})">
       <div class="res-thumb" style="background:${r.bg||'var(--surface2)'}">
-        ${r.dataUrl ? `<img src="${r.dataUrl}" alt="${r.name}">` : `<span style="font-size:44px">${r.emoji||'📦'}</span>`}
+        ${thumb}
         <div class="res-overlay"><button class="btn btn-primary" style="padding:8px 18px;font-size:12px;">⬇ Download</button></div>
       </div>
       <div class="res-info"><h4>${r.name}</h4><p>${r.category}</p></div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 }
 function downloadResource(id) {
   const r = resources.find(x => x.id === id);
   if (!r) return;
   if (r.dataUrl) {
-    const a = document.createElement('a'); a.href = r.dataUrl; a.download = r.name + '.' + (r.ext||'png'); a.click();
+    const a = document.createElement('a');
+    a.href = r.dataUrl;
+    a.download = r.name + '.' + (r.ext || (r.fileType === 'video' ? 'mp4' : 'png'));
+    a.click();
     toast('Downloading ' + r.name + '!', 'success');
   } else { toast('No file attached to this resource.', 'error'); }
 }
@@ -1123,6 +1118,9 @@ function closeUploadModal() {
   document.getElementById('modalAdminPass').value = '';
   document.getElementById('resFileName').textContent = '';
   document.getElementById('resDropZone').classList.remove('has-file');
+  document.getElementById('resDropIcon').textContent = '📁';
+  document.getElementById('resVideoPreviewWrap').style.display = 'none';
+  document.getElementById('resVideoPreview').src = '';
   resFile = null;
 }
 function submitResource() {
@@ -1132,15 +1130,31 @@ function submitResource() {
   if (!name) { toast('Please enter a resource name.', 'error'); return; }
   if (!cat)  { toast('Please enter a category.', 'error'); return; }
   const isAdminSubmit = pass === ADMIN_PASS;
-  const newItem = { id: Date.now(), name, category: cat, emoji: '📦', bg: '#0d1120', approved: isAdminSubmit, ext: resFile ? resFile.name.split('.').pop() : 'png' };
+  const fileType = resFile
+    ? (resFile.type.startsWith('video/') ? 'video' : resFile.type.startsWith('image/') ? 'image' : 'other')
+    : 'other';
+  const newItem = {
+    id: Date.now(), name, category: cat,
+    emoji: fileType === 'video' ? '🎬' : '📦',
+    bg: '#0d1120',
+    approved: isAdminSubmit,
+    fileType,
+    ext: resFile ? resFile.name.split('.').pop() : 'png'
+  };
   const finalize = dataUrl => {
     if (dataUrl) newItem.dataUrl = dataUrl;
     if (isAdminSubmit) { resources.push(newItem); _saveData(); toast('✅ Resource published!', 'success'); renderResources(); }
     else { queue.push(newItem); _saveData(); toast('📥 Submitted for review!', 'info'); renderQueue(); }
     closeUploadModal();
   };
-  if (resFile && resFile.type.startsWith('image/')) {
-    const reader = new FileReader(); reader.onload = e => finalize(e.target.result); reader.readAsDataURL(resFile);
+  if (resFile && (resFile.type.startsWith('image/') || resFile.type.startsWith('video/'))) {
+    // Warn if video is large (>50MB) — localStorage limit
+    if (resFile.size > 50 * 1024 * 1024) {
+      toast('⚠ File over 50MB — may fail to save. Consider a smaller clip.', 'error');
+    }
+    const reader = new FileReader();
+    reader.onload = e => finalize(e.target.result);
+    reader.readAsDataURL(resFile);
   } else { finalize(null); }
 }
 
