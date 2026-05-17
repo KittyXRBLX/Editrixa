@@ -1043,6 +1043,23 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 .admin-status.unlocked { color: var(--success); }
 
+/* Admin clear button */
+.btn-clear-data {
+  display: none;
+  padding: 6px 14px;
+  background: rgba(255,77,106,0.1);
+  color: var(--danger);
+  border: 1px solid rgba(255,77,106,0.3);
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-clear-data:hover { background: rgba(255,77,106,0.2); }
+.btn-clear-data.show { display: inline-flex; }
+
 /* ============================================================
    MODAL
 ============================================================ */
@@ -1550,6 +1567,7 @@ input[type=range]::-webkit-slider-thumb:hover {
         <label>Admin</label>
         <input type="password" class="form-input" id="adminPassInput" placeholder="Enter password to unlock admin controls" oninput="checkAdmin()">
         <div class="admin-status" id="adminStatus">🔒 Locked</div>
+        <button class="btn-clear-data" id="clearDataBtn" onclick="clearAllData()">🗑 Clear All</button>
       </div>
 
       <!-- Controls row -->
@@ -1667,6 +1685,31 @@ const VDA_HOST    = 'https://p.savenow.to';
 const ADMIN_PASS  = 'AvaLkindafine';
 
 /* ============================================================
+   PERSISTENCE
+============================================================ */
+function _saveData() {
+  try {
+    localStorage.setItem('editrixa_resources', JSON.stringify(resources));
+    localStorage.setItem('editrixa_queue',     JSON.stringify(queue));
+  } catch(e) {
+    // localStorage can fill up with large base64 images
+    console.warn('localStorage save failed:', e);
+    toast('⚠ Storage full — try clearing old resources.', 'error');
+  }
+}
+
+function _loadData() {
+  try {
+    const r = localStorage.getItem('editrixa_resources');
+    const q = localStorage.getItem('editrixa_queue');
+    if (r) resources = JSON.parse(r);
+    if (q) queue     = JSON.parse(q);
+  } catch(e) {
+    console.warn('localStorage load failed:', e);
+  }
+}
+
+/* ============================================================
    STATE
 ============================================================ */
 let currentPage     = 'home';
@@ -1679,10 +1722,10 @@ let pollTimer = null;
 let ffmpegLoaded = false;
 let ffmpegInstance = null;
 
-let resources = [
-  // starts empty — only real uploaded items appear
-];
+// Start empty, then load from localStorage
+let resources = [];
 let queue = [];
+_loadData();
 
 /* ============================================================
    TOAST
@@ -1699,18 +1742,15 @@ function toast(msg, type = '') {
    PAGE NAVIGATION
 ============================================================ */
 function showPage(id) {
-  // hide all
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
 
-  // show target
   const pg = document.getElementById('page-' + id);
   if (!pg) return;
   pg.classList.add('active');
   currentPage = id;
 
-  // highlight nav
   document.querySelectorAll('.nav-tab').forEach(t => {
     if (t.textContent.toLowerCase().replace(/\s/g,'').includes(id)) t.classList.add('active');
   });
@@ -1718,10 +1758,9 @@ function showPage(id) {
     if (m.textContent.toLowerCase().includes(id)) m.classList.add('active');
   });
 
-  // re-trigger animations
   pg.querySelectorAll('.anim-item').forEach(el => {
     el.style.animation = 'none';
-    el.offsetHeight; // reflow
+    el.offsetHeight;
     el.style.animation = '';
   });
 
@@ -1835,13 +1874,11 @@ function patchMp4Fps(buffer, targetFps) {
   const data = new Uint8Array(buffer.slice(0));
   const view = new DataView(data.buffer);
   for (let i = 0; i < data.length - 8; i++) {
-    // mvhd
     if (data[i+4]===0x6D&&data[i+5]===0x76&&data[i+6]===0x68&&data[i+7]===0x64) {
       const v = data[i+8];
       const tsOff = v===1 ? i+8+1+3+8+8 : i+8+1+3+4+4;
       view.setUint32(tsOff, targetFps * 1000);
     }
-    // mdhd
     if (data[i+4]===0x6D&&data[i+5]===0x64&&data[i+6]===0x68&&data[i+7]===0x64) {
       const v = data[i+8];
       const tsOff = v===1 ? i+8+1+3+8+8 : i+8+1+3+4+4;
@@ -2096,7 +2133,21 @@ function checkAdmin() {
   const el  = document.getElementById('adminStatus');
   el.textContent = isAdmin ? '✅ Unlocked' : '🔒 Locked';
   el.className   = isAdmin ? 'admin-status unlocked' : 'admin-status';
+  // Show/hide the clear data button
+  const clearBtn = document.getElementById('clearDataBtn');
+  clearBtn.classList.toggle('show', isAdmin);
   renderQueue();
+}
+
+function clearAllData() {
+  if (!isAdmin) return;
+  if (!confirm('Delete ALL resources and the pending queue? This cannot be undone.')) return;
+  resources = [];
+  queue = [];
+  _saveData();
+  renderResources();
+  renderQueue();
+  toast('All data cleared.', 'error');
 }
 
 /* ============================================================
@@ -2179,14 +2230,17 @@ function approveQueue(i) {
   const item = queue[i];
   item.approved = true;
   resources.push(item);
-  queue.splice(i,1);
+  queue.splice(i, 1);
+  _saveData(); // persist
   toast(item.name + ' approved and published!', 'success');
   renderResources();
   renderQueue();
 }
+
 function rejectQueue(i) {
   const name = queue[i].name;
-  queue.splice(i,1);
+  queue.splice(i, 1);
+  _saveData(); // persist
   toast(name + ' rejected.', 'error');
   renderQueue();
 }
@@ -2229,10 +2283,12 @@ function submitResource() {
     if (dataUrl) newItem.dataUrl = dataUrl;
     if (isAdminSubmit) {
       resources.push(newItem);
+      _saveData(); // persist
       toast('✅ Resource published immediately!', 'success');
       renderResources();
     } else {
       queue.push(newItem);
+      _saveData(); // persist
       toast('📥 Submitted for admin review — you\'re in the queue!', 'info');
       renderQueue();
     }
