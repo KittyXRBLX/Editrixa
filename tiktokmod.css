@@ -1,0 +1,9 @@
+/* TikTok Mod base styles */
+.tmod-dl-btn:hover,
+.tmod-copy-btn:hover {
+  transform: scale(1.08);
+}
+.tmod-dislike {
+  font-family: -apple-system, sans-serif;
+  color: rgba(255,255,255,0.9);
+}
